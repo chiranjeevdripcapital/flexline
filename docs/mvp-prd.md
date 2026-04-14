@@ -1,7 +1,7 @@
 # Flexline — MVP Product Requirements Document (PRD)
 
 **Status:** Draft for pilot MVP  
-**Last updated:** 2026-04-15  
+**Last updated:** 2026-04-16  
 **UI note:** No bespoke visual design in MVP; use platform defaults unless layout is specified below because it affects requirements.
 
 ---
@@ -21,7 +21,7 @@ The MVP should give pilots a **single portal** to **authenticate**, **request dr
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Borrower portal user**            | Request draws, see available credit and schedules, add/verify bank accounts for disbursement (and future repayment setup), understand fees and instalments. |
 | **Company contact / admin contact** | May receive portal access (via internal “enable login” flows); may act on behalf of the business depending on account setup.                                |
-| **Operations**                      | See draw requests and repayment records, reconcile with manual ACH and funding processes, update statuses and limits as per internal policy.                |
+| **Operations**                      | See draw requests and repayment records, reconcile with manual ACH and funding processes, update statuses and limits as per internal policy; at volume, needs **queues, search, audit, and metrics** (see §3.4).                |
 | **Risk / underwriting**             | Move accounts through underwriting, record approve/reject decisions within defined limits, support audit trail of decisions.                                |
 
 
@@ -57,6 +57,53 @@ The MVP should give pilots a **single portal** to **authenticate**, **request dr
 
 - **ACH authorization letter:** Legal must supply the **final PDF** (with Adobe Sign text tags if required), disclosures, and signatory rules; engineering may ship with a **non-legal placeholder PDF** only for integration testing until final copy is approved (see `docs/templates/ach-authorization-letter-placeholder.md`).
 - **Consolidated business rules** for first instalment date offsets, facility anchor (1st vs 15th), and **grace vs overdue interest** (drafts conflict; see §9).
+
+### 3.4 Operator experience at scale (100+ customers)
+
+Design assumption: a small ops team will **not** scale by opening each company in the borrower portal. Internal surfaces must support **throughput**, **audit**, and **prioritisation**.
+
+**Work intake**
+
+- **Queues (or equivalent saved views)** with counts: e.g. draws **Processing**, bank accounts **awaiting ownership verification**, **ACH/e-sign incomplete**, **failed verification**—each with **age** (time in state) and optional **SLA target** (policy-defined, e.g. business hours to first touch).
+- **Global search** across at minimum **organization name**, **internal org id**, **draw id**, and **primary contact email** (exact scope TBD with privacy).
+- **Filters and sort** on list screens: status, date range, amount band, facility lifecycle, portal suspended flag.
+- **Assignment (optional policy):** ability to **claim** or **assign** a draw (or ticket) to an operator so two people do not duplicate work; **handoff** when out of office—exact rules TBD.
+
+**Context on one screen**
+
+- **Company snapshot** on draw/bank views: limit, **available / outstanding** (per agreed definitions), lifecycle, portal status, link to **all draws** and **all bank accounts** for that org.
+- **Structured decline / hold reasons** (internal codes + borrower-safe messaging map) for reporting and fewer ad-hoc emails.
+- **Links or references** to importer context (Contacts, Documents, etc.) as deep links or read-only summaries—implementation may stay in the importer app if Flexline admin only links out.
+
+**Safety and compliance**
+
+- **Immutable audit trail** for money-moving decisions: who approved/declined a draw, when, from which surface; bank status changes that affect payout eligibility; optional note field for ops.
+- **Role separation** when policy requires it (ops vs risk vs read-only finance); **dual control** for high-risk overrides—**not mandated** in MVP unless security signs off (see §6).
+
+**Reliability**
+
+- **Visibility** when integrations fail (Plaid, facility sync, e-sign webhooks): surfaced status or ops runbook link; retry/dead-letter is an engineering concern but **operators need a non-silent failure mode**.
+
+**Metrics (for staffing and process)**
+
+- Queue depth by type, **median / p95 time** draw submitted → funded (or to decline), verification and e-sign funnel drop-off—captured in §8 where marked for ops scale.
+
+### 3.5 Engineering deliverables — Flexline `rails_app` admin (pending product confirmation)
+
+**Status:** Documented below for alignment. **Engineering must not start this build until product explicitly confirms** (reply or ticket). Scope is **Phase 1** in the existing **HTTP Basic** admin area unless replaced by shared internal auth later.
+
+**Phase 1 (proposed build on confirmation)**
+
+1. **`/admin` overview (dashboard)** — Counts of draws by status (at least **Processing**), optional counts for bank accounts in **awaiting_plaid**, **micro_deposit_sent**, **failed**; each count links to a **pre-filtered** list view.
+2. **`/admin/draws` index upgrades** — **Search** (organization name, draw id); **filters** (status, created date range); **sort** (newest first, oldest first, amount); columns including **organization**, **amount**, **term**, **age in queue**, **disbursement account mask**, **created_at**; **CSV export** of the current filtered result set.
+3. **`/admin/draws/:id` upgrades** — **Internal operator notes** (persisted on the draw); decline path uses **structured internal reason** (enum or taxonomy) plus existing borrower-facing messaging rules; show **company snapshot** (limit, available, outstanding, portal status, lifecycle).
+4. **`/admin/organizations` index + show** — Paginated list with **search** by name; **show** page lists recent draws and bank account summary (status, method, mask)—navigation hub for “everything about this customer.”
+5. **`/admin/bank_accounts` index** — Cross-organization list with **filters** (verification status, verification method, org search); columns for org, mask, method, statuses, timestamps; link to borrower-facing bank detail or admin show as implemented.
+6. **`AdminEvent` (or equivalent) audit model** — Append-only rows for **draw approved**, **draw declined**, and other admin actions with **timestamp**, **action type**, **subject** (draw/org/bank), **actor identifier** (e.g. HTTP Basic username in MVP), optional JSON **metadata**; **show recent events** on draw/org admin pages.
+
+**Explicitly not in Phase 1** (remain PRD / later phases unless re-scoped on confirmation)
+
+- Full **RBAC** beyond Basic-auth operator identity, **dual approval** workflows, **email template CMS**, **Slack/PagerDuty** integrations, **borrower in-app messaging**, and **automatic SLA breach alerts**.
 
 ---
 
@@ -146,6 +193,7 @@ Future automation: **risk policy on draw submit** and **ACH/wire initiation** af
 - **As** operations **I want** Draws and Repayments lists **so that** I can reconcile manual funding and ACH with portal activity.
   - **AC:** Draw list includes stable **draw identifier** and ties to company/facility, amount, term, status, timestamps, and disbursement account reference.
   - **AC:** Repayment list supports instalment lines and links to draws; supports **marking paid** (or integration to the system of record that does marking) per ops workflow.
+  - **AC (scale, §3.4):** Once §3.5 Phase 1 is confirmed and built, admin draw flows support **search, filter, sort, queue entry from `/admin` overview, CSV export, internal notes, structured decline codes, and AdminEvent audit** as specified there.
 
 ### 4.9 ACH authorization and Adobe eSign (MVP product intent; not a compliance claim)
 
@@ -178,7 +226,8 @@ Fields are indicative; schemas belong to engineering.
 | **Portal user**                      | Login identity                      | Email, auth credentials reference, linkage to organization and role.                                                                                                                                                         |
 | **Contact**                          | Person record from importer/KYC     | KYC payload reference; portal enabled flag; invitation timestamps.                                                                                                                                                           |
 | **Bank account**                     | Disbursement (+ future repayment)   | Holder name, bank name, type, routing, account number (stored securely), mask for display, **ownership verification** method (Plaid / micro-deposit) and status, **ACH authorization** status, **Adobe/agreement id**, **signed PDF** reference, timestamps for verification and e-sign milestones. |
-| **Draw**                             | Single draw request / obligation    | Amount, term (3/6 mo), fee quote snapshot, schedule snapshot, disbursement bank account id, status, timestamps, decline reason (if applicable).                                                                              |
+| **Draw**                             | Single draw request / obligation    | Amount, term (3/6 mo), fee quote snapshot, schedule snapshot, disbursement bank account id, status, timestamps, decline reason (if applicable); **internal operator notes** (§3.5); optional **internal decline code** (§3.4).                                                                              |
+| **AdminEvent** (or equivalent)       | Ops / audit                         | Action type, subject references, actor identifier, timestamp, metadata JSON (§3.5 Phase 1).                                                                                                                                 |
 | **Instalment**                       | Scheduled repayment line            | Due date, amounts (principal/interest/fees), state, link to draw(s), aggregation key for monthly total.                                                                                                                      |
 | **Repayment event / marking**        | Ops reconciliation                  | Amount, date, method (manual ACH, wire, etc.), allocations to instalments, operator id, notes.                                                                                                                               |
 | **Admin decision**                   | Underwriting outcome                | Decision, limits, actor, timestamp, optional documents.                                                                                                                                                                      |
@@ -241,6 +290,9 @@ flowchart LR
 | **Bank verification completion rate**   | UX / ops load                     | Proposed.                                                                              |
 | **ACH authorization signed rate**       | Compliance / funnel health        | % of ownership-verified accounts that reach **signed** within N days; drop-off at e-sign. |
 | **Login success / reset completion**    | Access friction                   | Proposed.                                                                              |
+| **Draw queue depth (Processing)**       | Ops scale                         | Count over time; target thresholds for staffing (§3.4).                                |
+| **Draw age in queue (p50 / p95 hours)** | Ops scale                         | Time from borrower submit to Funded or Declined; segment by amount band if useful.      |
+| **Admin audit coverage**                | Compliance                        | % of approve/decline actions with a corresponding **AdminEvent** row once §3.5 Phase 1 ships. |
 
 
 ---
@@ -273,5 +325,6 @@ flowchart LR
 | 2026-04-14 | Product | Initial consolidated MVP PRD from internal drafts and pilot decisions. |
 | 2026-04-14 | Product | Added §4.3.1 borrower bank-verification edge cases and §4.3.2 admin/ops bank + notification requirements. |
 | 2026-04-15 | Product | ACH authorization letter + **Adobe eSign (Bluebird TPA)** after Plaid/micro-deposit; §4.3.3, §4.9, data object and workflow updates; placeholder template under `docs/templates/`. |
+| 2026-04-16 | Product | §3.4 operator-at-scale requirements; §3.5 **pending-confirmation** engineering deliverables for Rails admin; §5 AdminEvent + draw notes; §8 ops metrics; Operations persona pointer. |
 
 
