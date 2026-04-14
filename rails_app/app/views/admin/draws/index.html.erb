@@ -1,0 +1,34 @@
+<section class="rounded-xl border border-slate-200 bg-white p-5 shadow">
+  <h2 class="text-sm font-semibold text-slate-800">Recent draw requests</h2>
+  <div class="mt-4 overflow-x-auto">
+    <table class="min-w-full text-left text-sm">
+      <thead>
+        <tr class="border-b text-xs font-semibold uppercase text-slate-500">
+          <th class="py-2 pr-4">Ref</th>
+          <th class="py-2 pr-4">Company</th>
+          <th class="py-2 pr-4">Amount</th>
+          <th class="py-2 pr-4">Term</th>
+          <th class="py-2 pr-4">Status</th>
+          <th class="py-2 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @draws.each do |draw| %>
+          <tr class="border-b border-slate-100 last:border-0">
+            <td class="py-2 pr-4 font-medium"><%= draw.public_code %></td>
+            <td class="py-2 pr-4"><%= draw.organization.name %></td>
+            <td class="py-2 pr-4"><%= number_to_currency(draw.amount_cents.to_d / 100, unit: "$") %></td>
+            <td class="py-2 pr-4"><%= draw.term_months %> mo</td>
+            <td class="py-2 pr-4"><%= draw.status.titleize %></td>
+            <td class="py-2 text-right">
+              <%= link_to "Open ›", admin_draw_path(draw), class: "font-semibold text-emerald-700 hover:underline" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <% if @draws.empty? %>
+    <p class="mt-4 text-sm text-slate-500">No draws yet.</p>
+  <% end %>
+</section>

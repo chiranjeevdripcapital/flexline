@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Organization < ApplicationRecord
+  PORTAL_STATUSES = %w[active suspended].freeze
+
   has_many :users, dependent: :destroy
   has_many :bank_accounts, dependent: :destroy
   has_many :draws, dependent: :destroy
@@ -8,8 +10,14 @@ class Organization < ApplicationRecord
   validates :name, presence: true
   validates :credit_limit_cents, numericality: { greater_than: 0 }
   validates :available_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :portal_status, inclusion: { in: PORTAL_STATUSES }
+  validates :importer_external_id, uniqueness: { allow_blank: true }
 
   validate :available_within_limit
+
+  def portal_active?
+    portal_status == "active"
+  end
 
   def public_draw_code(draw)
     return "DRAFT" unless draw.id

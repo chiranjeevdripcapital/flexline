@@ -1,0 +1,9 @@
+<p>Hello,</p>
+<p>We received a draw request for <strong><%= @organization.name %></strong>.</p>
+<ul>
+  <li>Reference: <strong><%= @draw.public_code %></strong></li>
+  <li>Amount: <strong><%= number_to_currency(@draw.amount_cents.to_d / 100, unit: "$") %></strong></li>
+  <li>Term: <strong><%= @draw.term_months %> months</strong></li>
+  <li>Status: <strong><%= @draw.status.titleize %></strong> (operations will review and fund)</li>
+</ul>
+<p>You will receive another email when the status changes.</p>

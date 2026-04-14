@@ -9,9 +9,13 @@ Rails.application.routes.draw do
   post "session", to: "sessions#create", as: :session
   delete "session", to: "sessions#destroy"
 
+  resource :portal_suspension, only: %i[show]
+
   resources :bank_accounts, only: %i[index new create show] do
     member do
       post :plaid_complete
+      post :plaid_link_token
+      post :plaid_exchange
       post :micro_confirm
       post :restart_verification
       post :use_micro_deposits_instead
@@ -19,4 +23,15 @@ Rails.application.routes.draw do
   end
   resources :draw_requests, only: %i[new create show]
   resources :repayments, only: %i[index]
+
+  namespace :admin do
+    resources :draws, only: %i[index show] do
+      member do
+        post :approve
+        post :decline
+      end
+    end
+  end
+
+  post "/internal/admin/facilities/sync", to: "internal/admin/facilities#sync", as: :internal_admin_facilities_sync
 end

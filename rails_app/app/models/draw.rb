@@ -14,12 +14,18 @@ class Draw < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validate :bank_account_belongs_to_organization
   validate :bank_account_verified_for_funding, on: :create
+  validate :amount_within_available_credit, on: :create
 
   scope :recent_first, -> { order(created_at: :desc) }
 
-  # Demo funding: immediately funds the draw, debits availability, and creates a simple
-  # equal-principal schedule (no finance-grade interest yet; see PRD open questions).
-  def submit_and_fund!
+  # Operations approves after risk review; creates instalments and debits availability.
+  def approve_and_fund!
+    errors.clear
+    unless status == "processing"
+      errors.add(:status, "must be processing to fund")
+      return false
+    end
+
     transaction do
       organization.with_lock do
         organization.reload
@@ -29,7 +35,7 @@ class Draw < ApplicationRecord
         end
 
         create_installment_schedule!
-        update!(status: "funded", funded_at: Time.current)
+        update!(status: "funded", funded_at: Time.current, decline_reason: nil)
         organization.update!(available_cents: organization.available_cents - amount_cents)
       end
     end
@@ -37,11 +43,32 @@ class Draw < ApplicationRecord
     errors.empty? && status == "funded"
   end
 
+  def decline!(reason:)
+    errors.clear
+    unless status == "processing"
+      errors.add(:status, "must be processing to decline")
+      return false
+    end
+
+    update!(
+      status: "declined",
+      decline_reason: reason.presence || "Declined by operations.",
+      funded_at: nil
+    )
+    true
+  end
+
   def public_code
     organization.public_draw_code(self)
   end
 
   private
+
+  def amount_within_available_credit
+    return if organization.blank? || amount_cents.blank?
+
+    errors.add(:amount_cents, "exceeds available credit") if amount_cents > organization.available_cents
+  end
 
   def bank_account_belongs_to_organization
     return if bank_account_id.blank?

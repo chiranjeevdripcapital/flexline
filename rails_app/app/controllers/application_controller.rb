@@ -2,10 +2,26 @@
 
 class ApplicationController < ActionController::Base
   before_action :authenticate_user!
+  before_action :ensure_portal_active!, if: :portal_guard_needed?
 
   helper_method :current_user, :current_organization
 
   private
+
+  def portal_guard_needed?
+    current_user.present? &&
+      current_organization.present? &&
+      !current_organization.portal_active? &&
+      !skip_portal_status_check?
+  end
+
+  def skip_portal_status_check?
+    controller_name.in?(%w[sessions portal_suspensions])
+  end
+
+  def ensure_portal_active!
+    redirect_to portal_suspension_path
+  end
 
   def authenticate_user!
     return if controller_name == "sessions"

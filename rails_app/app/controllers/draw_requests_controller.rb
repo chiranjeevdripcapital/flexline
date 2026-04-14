@@ -18,17 +18,8 @@ class DrawRequestsController < ApplicationController
       return
     end
 
-    unless @draw.submit_and_fund!
-      messages = @draw.errors.full_messages
-      messages << "Unable to fund draw." if messages.empty?
-      @draw.destroy
-      @draw = current_organization.draws.new(draw_attributes)
-      messages.each { |m| @draw.errors.add(:base, m) }
-      render :new, status: :unprocessable_entity
-      return
-    end
-
-    redirect_to draw_request_path(@draw), notice: "Draw funded (demo schedule created)."
+    FlexlineMailer.draw_submitted(@draw).deliver_later
+    redirect_to draw_request_path(@draw), notice: "Draw submitted. Operations will review it before funding."
   end
 
   def show

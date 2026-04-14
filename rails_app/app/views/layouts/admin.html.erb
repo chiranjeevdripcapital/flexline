@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Flexline Admin</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <%= csrf_meta_tags %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+  </head>
+  <body class="min-h-screen bg-slate-100 p-6 font-sans text-slate-900">
+    <header class="mx-auto mb-6 flex max-w-5xl items-center justify-between gap-4">
+      <h1 class="text-lg font-bold">Flexline — operations</h1>
+      <%= link_to "Draw queue", admin_draws_path, class: "text-sm font-semibold text-emerald-700 hover:underline" %>
+    </header>
+    <div class="mx-auto max-w-5xl"><%= yield %></div>
+  </body>
+</html>

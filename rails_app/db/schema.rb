@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_15_120006) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_15_120007) do
   create_table "bank_accounts", force: :cascade do |t|
     t.integer "organization_id", null: false
     t.string "display_name", null: false
@@ -45,6 +45,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_15_120006) do
     t.datetime "funded_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "decline_reason"
     t.index ["bank_account_id"], name: "index_draws_on_bank_account_id"
     t.index ["organization_id"], name: "index_draws_on_organization_id"
   end
@@ -69,6 +70,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_15_120006) do
     t.integer "available_cents", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "importer_external_id"
+    t.string "portal_status", default: "active", null: false
+    t.index ["importer_external_id"], name: "index_organizations_on_importer_external_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|

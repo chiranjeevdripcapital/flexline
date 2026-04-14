@@ -1,0 +1,6 @@
+<p>Hello,</p>
+<p>Your draw request <strong><%= @draw.public_code %></strong> was not approved.</p>
+<% if @draw.decline_reason.present? %>
+  <p><strong>Reason:</strong> <%= @draw.decline_reason %></p>
+<% end %>
+<p>If you have questions, reply to your Flexline operations contact.</p>

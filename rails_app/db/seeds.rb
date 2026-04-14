@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
-org = Organization.find_or_initialize_by(name: "Demo Company Ltd.")
-org.assign_attributes(credit_limit_cents: 15_000_000, available_cents: 8_750_000)
+org = Organization.find_or_initialize_by(importer_external_id: "demo-importer-001")
+org.assign_attributes(
+  name: "Demo Company Ltd.",
+  credit_limit_cents: 15_000_000,
+  available_cents: 8_750_000,
+  portal_status: "active"
+)
 org.save!
 
 user = User.find_or_initialize_by(email: "pilot@example.com")

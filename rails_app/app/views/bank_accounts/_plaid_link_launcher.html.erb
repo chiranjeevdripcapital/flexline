@@ -1,0 +1,73 @@
+<div class="mt-4 space-y-2 rounded-lg border border-sky-200 bg-sky-50/80 p-4">
+  <button
+    type="button"
+    id="flexline-plaid-open"
+    class="inline-flex cursor-pointer rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800"
+  >
+    Open Plaid Link
+  </button>
+  <p class="text-xs text-sky-950/90">
+    You will sign in at your bank in Plaid’s secure window. Flexline does not see your bank password.
+  </p>
+</div>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script>
+  (function () {
+    const btn = document.getElementById("flexline-plaid-open");
+    if (!btn) return;
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+    const tokenUrl = "<%= plaid_link_token_bank_account_path(a) %>";
+    const exchangeUrl = "<%= plaid_exchange_bank_account_path(a) %>";
+
+    btn.addEventListener("click", async function () {
+      btn.disabled = true;
+      try {
+        const res = await fetch(tokenUrl, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+            "X-CSRF-Token": csrf,
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.message || data.error || "Could not start Plaid.");
+          return;
+        }
+        const handler = Plaid.create({
+          token: data.link_token,
+          onSuccess: async function (public_token, metadata) {
+            const account = metadata.accounts && metadata.accounts[0];
+            const plaid_account_id = account && account.id;
+            const ex = await fetch(exchangeUrl, {
+              method: "POST",
+              credentials: "same-origin",
+              headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                "X-CSRF-Token": csrf,
+              },
+              body: JSON.stringify({ public_token: public_token, plaid_account_id: plaid_account_id }),
+            });
+            const body = await ex.json();
+            if (!ex.ok) {
+              alert(body.message || body.error || "Plaid exchange failed.");
+              return;
+            }
+            window.location = body.redirect_path || window.location.pathname;
+          },
+          onExit: function () {
+            btn.disabled = false;
+          },
+        });
+        handler.open();
+      } catch (e) {
+        alert("Network error starting Plaid.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>

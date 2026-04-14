@@ -1,0 +1,8 @@
+<div class="mx-auto max-w-lg space-y-4 rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950 shadow-card">
+  <h1 class="text-lg font-bold text-flexline-navy">Portal access suspended</h1>
+  <p>
+    <strong><%= @organization.name %></strong> cannot submit new draws or bank changes until operations reactivates the account.
+  </p>
+  <p class="text-xs text-amber-900/90">If you believe this is a mistake, contact your Flexline representative.</p>
+  <%= button_to "Sign out", session_path, method: :delete, class: "mt-4 cursor-pointer rounded-lg bg-flexline-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800" %>
+</div>

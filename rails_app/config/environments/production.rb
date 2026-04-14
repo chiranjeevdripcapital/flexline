@@ -15,4 +15,16 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true
   config.active_record.dump_schema_after_migration = false
+
+  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "example.com"), protocol: "https" }
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.raise_delivery_errors = ENV["MAILER_RAISE_DELIVERY_ERRORS"] == "true"
+  config.action_mailer.delivery_method =
+    if ENV["SMTP_ADDRESS"].present?
+      :smtp
+    elsif ENV["MAILER_DELIVERY_METHOD"].present?
+      ENV["MAILER_DELIVERY_METHOD"].to_sym
+    else
+      :logger
+    end
 end

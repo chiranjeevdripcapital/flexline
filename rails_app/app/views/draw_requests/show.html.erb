@@ -4,6 +4,15 @@
     <p class="mt-1 text-sm text-flexline-muted">
       <%= format_money(@draw.amount_cents) %> · <%= @draw.term_months %> months · <%= @draw.status.titleize %>
     </p>
+    <% if @draw.status == "processing" %>
+      <p class="mt-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-950">
+        Operations is reviewing this draw. You will get an email when it is funded or declined.
+      </p>
+    <% elsif @draw.status == "declined" && @draw.decline_reason.present? %>
+      <p class="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-950">
+        <strong>Update:</strong> <%= @draw.decline_reason %>
+      </p>
+    <% end %>
   </div>
 
   <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">

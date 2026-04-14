@@ -1,7 +1,15 @@
 # frozen_string_literal: true
 
 class BankAccountsController < ApplicationController
-  before_action :set_bank_account, only: %i[show plaid_complete micro_confirm restart_verification use_micro_deposits_instead]
+  before_action :set_bank_account, only: %i[
+    show
+    plaid_complete
+    plaid_link_token
+    plaid_exchange
+    micro_confirm
+    restart_verification
+    use_micro_deposits_instead
+  ]
 
   def index
     @accounts = current_organization.bank_accounts.order(primary_for_disbursement: :desc, created_at: :desc)
@@ -36,6 +44,43 @@ class BankAccountsController < ApplicationController
     render :new, status: :unprocessable_entity
   end
 
+  def plaid_link_token
+    unless @bank_account.verification_status == "awaiting_plaid"
+      render json: { error: "invalid_state" }, status: :unprocessable_entity
+      return
+    end
+
+    token = Flexline::PlaidGateway.create_link_token(bank_account: @bank_account)
+    render json: { link_token: token }
+  rescue Flexline::PlaidGateway::ConfigurationError
+    render json: { error: "plaid_not_configured" }, status: :service_unavailable
+  rescue Plaid::ApiError => e
+    Rails.logger.error("[bank_accounts#plaid_link_token] #{e.class}: #{e.message}")
+    render json: { error: "plaid_error", message: e.message }, status: :bad_gateway
+  end
+
+  def plaid_exchange
+    unless @bank_account.verification_status == "awaiting_plaid"
+      render json: { error: "invalid_state" }, status: :unprocessable_entity
+      return
+    end
+
+    Flexline::PlaidGateway.exchange_and_finalize_bank_account!(
+      bank_account: @bank_account,
+      public_token: params.require(:public_token),
+      plaid_account_id: params.require(:plaid_account_id)
+    )
+    FlexlineMailer.bank_account_verified(@bank_account).deliver_later
+    render json: { ok: true, redirect_path: bank_account_path(@bank_account) }
+  rescue Flexline::PlaidGateway::ConfigurationError
+    render json: { error: "plaid_not_configured" }, status: :service_unavailable
+  rescue Plaid::ApiError => e
+    Rails.logger.error("[bank_accounts#plaid_exchange] #{e.class}: #{e.message}")
+    render json: { error: "plaid_error", message: e.message }, status: :bad_gateway
+  rescue ActionController::ParameterMissing => e
+    render json: { error: "missing_parameter", message: e.message }, status: :unprocessable_entity
+  end
+
   def plaid_complete
     unless @bank_account.verification_status == "awaiting_plaid"
       redirect_to bank_account_path(@bank_account), alert: "This account is not waiting on Plaid."
@@ -51,6 +96,7 @@ class BankAccountsController < ApplicationController
     item_id = params[:item_id].presence || "plaid_demo_item"
     account_id = params[:account_id].presence || "plaid_demo_account"
     @bank_account.complete_plaid_verification!(item_id: item_id, account_id: account_id)
+    FlexlineMailer.bank_account_verified(@bank_account).deliver_later
     redirect_to bank_account_path(@bank_account), notice: "Bank account verified. You can use it for draw disbursements."
   rescue StandardError => e
     Rails.logger.error("[bank_accounts#plaid_complete] #{e.class}: #{e.message}")
@@ -72,6 +118,7 @@ class BankAccountsController < ApplicationController
     end
 
     if @bank_account.confirm_micro_deposit_amounts!(amount_a_cents: a, amount_b_cents: b)
+      FlexlineMailer.bank_account_verified(@bank_account).deliver_later
       redirect_to bank_account_path(@bank_account), notice: "Bank account verified. You can use it for draw disbursements."
     else
       msg =
