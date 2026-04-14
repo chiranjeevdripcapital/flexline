@@ -30,10 +30,10 @@
 
     <fieldset>
       <legend class="text-xs font-semibold uppercase tracking-wide text-flexline-muted">Term</legend>
-      <div class="mt-2 flex gap-3">
+      <div class="mt-2 flex flex-wrap gap-3">
         <% [ 6, 3 ].each do |months| %>
-          <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold <%= f.object.term_months.to_i == months ? "border-flexline-navy bg-flexline-navy text-white" : "border-flexline-border text-flexline-navy hover:bg-flexline-sidebar" %>">
-            <%= f.radio_button :term_months, months, class: "sr-only" %>
+          <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-flexline-border px-4 py-2 text-sm font-semibold text-flexline-navy shadow-sm hover:bg-flexline-sidebar has-[:checked]:border-flexline-navy has-[:checked]:bg-flexline-navy has-[:checked]:text-white has-[:checked]:shadow-none">
+            <%= f.radio_button :term_months, months, class: "h-4 w-4 shrink-0 accent-flexline-green" %>
             <%= months %> months
           </label>
         <% end %>
