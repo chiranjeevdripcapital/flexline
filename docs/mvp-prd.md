@@ -1,7 +1,7 @@
 # Flexline — MVP Product Requirements Document (PRD)
 
 **Status:** Draft for pilot MVP  
-**Last updated:** 2026-04-14  
+**Last updated:** 2026-04-15  
 **UI note:** No bespoke visual design in MVP; use platform defaults unless layout is specified below because it affects requirements.
 
 ---
@@ -35,8 +35,8 @@ The MVP should give pilots a **single portal** to **authenticate**, **request dr
 - **Customer portal**
   - Sign-in / session management (details TBD with security team).
   - **Dashboard** showing at minimum **available credit** (and utilized where data exists).
-  - **Draw request**: amount entry with validation against available credit; **3- or 6-month** term selection; **fees and repayment schedule preview** before confirmation; selection of a **verified disbursement bank account**; draw status visibility (**Processing / Funded / Declined** or equivalent).
-  - **Bank accounts**: list accounts with verification status; add account with mandatory fields (account holder name, bank name, account type checking/savings, routing number, account number); **Plaid instant account verification (IAV) preferred**, **micro-deposit verification fallback**; clear status labels (e.g. pending verification vs verified).
+  - **Draw request**: amount entry with validation against available credit; **3- or 6-month** term selection; **fees and repayment schedule preview** before confirmation; selection of a **fully authorized** disbursement bank account (see §4.3.3); draw status visibility (**Processing / Funded / Declined** or equivalent).
+  - **Bank accounts**: list accounts with clear **lifecycle status**; add account with mandatory fields (account holder name, bank name, account type checking/savings, routing number, account number); **Plaid IAV preferred**, **micro-deposit fallback**; **ACH authorization letter** completed via **Adobe eSign (Bluebird Third-Party API)** after ownership verification and **before** the account is treated as **fully authorized** for disbursement and future ACH debit (see §4.3.3 and §4.9).
   - **Repayments (non-payment execution)**: show **instalment schedule**, amounts, due dates, and **payment status** as recorded by operations; support borrower understanding of terms; store and display **instalment breakdown at draw level** where applicable.
 - **Internal Flexline admin / operations surfaces** (implementation may map to existing internal apps—treat as product capabilities, not a tech stack mandate)
   - Flexline **company profile** type with lifecycle and utilization states (see §5).
@@ -55,7 +55,7 @@ The MVP should give pilots a **single portal** to **authenticate**, **request dr
 
 ### 3.3 Phased / TBD (capture in open questions)
 
-- Full **ACH debit authorization** UX (mandatory disclosures, e-sign provider, retention) as specified in internal ACH drafts: **referenced as the target workflow** but **legal/compliance and timing vs MVP** must be confirmed before implementation commitments.
+- **ACH authorization letter:** Legal must supply the **final PDF** (with Adobe Sign text tags if required), disclosures, and signatory rules; engineering may ship with a **non-legal placeholder PDF** only for integration testing until final copy is approved (see `docs/templates/ach-authorization-letter-placeholder.md`).
 - **Consolidated business rules** for first instalment date offsets, facility anchor (1st vs 15th), and **grace vs overdue interest** (drafts conflict; see §9).
 
 ---
@@ -79,20 +79,34 @@ The MVP should give pilots a **single portal** to **authenticate**, **request dr
 
 - **As a** borrower **I want to** add a bank account **so that** I can receive disbursements.
   - **AC:** Mandatory fields: account holder name, bank name, account type (checking/savings), routing number, account number.
-  - **AC:** User can list all accounts and see **verification status**.
+  - **AC:** User can list all accounts and see **ownership verification status** (Plaid / micro-deposit) and **ACH authorization / e-sign status** as distinct dimensions (labels TBD with legal; e.g. “Ownership verified” vs “ACH authorization complete”).
   - **AC:** **Plaid IAV** offered as preferred path when available.
   - **AC:** **Micro-deposit fallback** when IAV is not possible; user is informed of delay (e.g. 1–2 business days); user can enter deposit amounts or verification code per chosen implementation; status updates on success/failure.
-  - **AC:** Only **verified** accounts appear as selectable **disbursement** accounts on draw confirmation.
+  - **AC:** **Ownership verification** (Plaid success **or** micro-deposit success) is **required** before the **ACH authorization letter** can be sent for signature (see §4.3.3).
+  - **AC:** Only bank accounts that are **fully authorized** (ownership verified **and** ACH letter **signed** per §4.9) appear as selectable **disbursement** accounts on draw confirmation.
+  - **AC:** If ownership is verified but ACH is unsigned, the portal shows a **clear next step** (open signing URL, resend, or contact support) without implying the account is ready for draws.
 
 #### 4.3.1 Bank verification — borrower edge cases (UX + rules)
 
-The portal design explicitly covers: **duplicate routing+account** (blocked with a single clear error); **legal name mismatch vs bank records** (captured at onboarding, re-checked by ops before payout); **Plaid unavailable / institution not listed** (in-place **switch to micro-deposits** without re-keying account numbers); **abandoned Plaid** (account remains **Awaiting Plaid** until completion, switch, or restart); **micro-deposit timing** (1–2 business day expectation, correct account type); **micro-deposit expiry** (configurable window, e.g. 10 days—restart required); **wrong micro amounts** (limited attempts, then **Failed** with restart); **verified account needs new numbers** (no in-place edit of core rails—**add + verify** a new account); **draw gating** (only **verified** selectable); **non-US / non-ACH** (copy + validation scope; Plaid errors funnel to micro where applicable).
+The portal design explicitly covers: **duplicate routing+account** (blocked with a single clear error); **legal name mismatch vs bank records** (captured at onboarding, re-checked by ops before payout); **Plaid unavailable / institution not listed** (in-place **switch to micro-deposits** without re-keying account numbers); **abandoned Plaid** (account remains **Awaiting Plaid** until completion, switch, or restart); **micro-deposit timing** (1–2 business day expectation, correct account type); **micro-deposit expiry** (configurable window, e.g. 10 days—restart required); **wrong micro amounts** (limited attempts, then **Failed** with restart); **verified account needs new numbers** (no in-place edit of core rails—**add + verify** a new account); **draw gating** (only **fully authorized** accounts selectable—see §4.3.3); **non-US / non-ACH** (copy + validation scope; Plaid errors funnel to micro where applicable).
+
+#### 4.3.3 ACH authorization letter and e-sign (gate after ownership verification)
+
+**Sequence (non-negotiable for product intent):** (1) Borrower completes **ownership verification** via **Plaid IAV** or **micro-deposit** confirmation. (2) Portal **then** presents (or automatically initiates) the **ACH authorization letter** for **electronic signature**. (3) Only after the agreement is **signed** (per callback / status from the e-sign provider) is the bank account treated as **fully authorized** for **draw disbursement selection** and for **future ACH debit** once automation exists. **Manual ACH in MVP** does not remove the requirement to **capture and store** the signed authorization for the verified account when this flow is live.
+
+**Document:** Legal supplies the production **PDF** (with Adobe Sign **text tags** for signers if required by the integration). Until then, engineering may use a **placeholder PDF** for integration testing only—see `docs/templates/ach-authorization-letter-placeholder.md`.
+
+**Integration:** **Adobe Acrobat Sign** via the internal **Bluebird Third-Party API** (`adobe_esign_upload`, signing URLs, and webhook/callback with the **signed PDF**). **API reference:** [Adobe eSign API (GitBook)](https://dripcapital-1.gitbook.io/third-party-api-docs/5iVFAdCGrNAmNvJUnBTJ/adobe-esign-api).
+
+**Borrower UX:** After step (1), show **“Sign ACH authorization”** (or equivalent); deep-link or embed flow per Adobe/signing URL pattern from the API; on **decline / expire / void**, show recovery (restart agreement, contact ops—exact rules TBD with legal).
+
+**Admin / ops:** Bank account list shows **e-sign status** (sent, viewed, signed, declined, expired), **agreement / envelope id** (or internal correlation id), **timestamps**, and link or storage reference to the **signed PDF** artifact for audit.
 
 #### 4.3.2 Admin / operations — bank account and verification
 
 Importer **company** and **facility limit** remain the source of truth for **approved credit**; the portal reads **available / limit** from the integrated service (sync mechanism TBD). **Contacts** use **Enable Flexline Portal Login** so the right email can access the borrower portal.
 
-For bank accounts, admin/ops needs at minimum: **list** of accounts per organization with **verification status**, **method** (Plaid vs micro-deposit), **mask**, **primary disbursement flag**, **timestamps** (created, verified, failed), **failure reason** (if any), and **Plaid item/account identifiers** for support. **Draw** views must show **which verified bank account** was selected for disbursement. Operators run **transaction risk policy** before funding; **no payout** to an account unless portal (and admin) show **verified**. When funding completes, **draw status** updates in admin and portal; **email** notifications should fire on verification success/failure, draw processing/funded/declined, and micro-deposit lifecycle as agreed with comms.
+For bank accounts, admin/ops needs at minimum: **list** of accounts per organization with **ownership verification status**, **verification method** (Plaid vs micro-deposit), **ACH / e-sign status** and **agreement id** (or envelope id), **mask**, **primary disbursement flag**, **timestamps** (created, ownership verified, ACH sent, ACH signed, failed), **failure reason** (if any), **Plaid item/account identifiers** for support, and **signed PDF** storage reference when available. **Draw** views must show **which fully authorized bank account** was selected for disbursement. Operators run **transaction risk policy** before funding; **no payout** to an account unless portal (and admin) show **fully authorized** (ownership + signed ACH letter). When funding completes, **draw status** updates in admin and portal; **email** notifications should fire on verification success/failure, **ACH sent/signed/declined**, draw processing/funded/declined, and micro-deposit lifecycle as agreed with comms.
 
 Future automation: **risk policy on draw submit** and **ACH/wire initiation** after pass—admin fields should support audit of **automation vs manual** decisions without redesigning the borrower flow.
 
@@ -102,7 +116,7 @@ Future automation: **risk policy on draw submit** and **ACH/wire initiation** af
   - **AC:** Amount cannot exceed **available credit**; validation is immediate on entry/review step.
   - **AC:** User selects **3- or 6-month** term.
   - **AC:** Before confirmation, UI shows **fee breakdown** and **repayment schedule preview** for the selected amount and term, including the draft rule that **first instalment interest accrual period may differ** (from draw date to first instalment date) vs **subsequent monthly accrual**—exact formulas per §9 once finalized.
-  - **AC:** User selects **verified** disbursement bank account.
+  - **AC:** User selects a **fully authorized** disbursement bank account (ownership verified and ACH letter signed per §4.3.3).
   - **AC:** Confirmation creates a draw in **Processing** (or equivalent); user can see **Processing / Funded / Declined** with basic timestamps.
 
 ### 4.5 Repayments (visibility and terms; ops execution external)
@@ -133,11 +147,23 @@ Future automation: **risk policy on draw submit** and **ACH/wire initiation** af
   - **AC:** Draw list includes stable **draw identifier** and ties to company/facility, amount, term, status, timestamps, and disbursement account reference.
   - **AC:** Repayment list supports instalment lines and links to draws; supports **marking paid** (or integration to the system of record that does marking) per ops workflow.
 
-### 4.9 ACH authorization package (draft-derived; not a compliance claim)
+### 4.9 ACH authorization and Adobe eSign (MVP product intent; not a compliance claim)
 
-Internal drafts describe a post-verification **ACH debit authorization** step with **Nacha-oriented minimum content**, **checkbox + submit**, capture of **timestamp / IP / user agent**, **Adobe e-sign**, and document storage against the bank account.
+**Purpose:** Capture a **borrower-signed ACH authorization letter** for the **specific verified bank account**, stored for operations and future ACH automation. **Legal/compliance** owns final copy, signer rules, disclosures, and retention; **this PRD does not certify Nacha, E-Sign, or state UCC compliance.**
 
-- **AC (product intent, pending legal/ops timing):** PRD **tracks** this as the **documented target** for when repayment automation is in scope; **legal must approve** copy, method of consent, retention, and provider. **Do not interpret this PRD as certifying Nacha or E-Sign compliance.**
+**When it runs:** **Immediately after** successful **ownership verification** (Plaid **or** micro-deposit)—see §4.3.3. It is **not** complete before that step.
+
+**How it runs (integration):** Flexline (or shared platform service) calls the **Bluebird Third-Party API** for **Adobe Acrobat Sign**: upload agreement (`adobe_esign_upload`), obtain **signing URLs** for the borrower (and any additional signers if legal requires), and consume **webhook/callback** payload to mark **signed** and persist the **returned signed PDF** against the bank account record. **Authoritative API shapes and field names:** [Adobe eSign API (GitBook)](https://dripcapital-1.gitbook.io/third-party-api-docs/5iVFAdCGrNAmNvJUnBTJ/adobe-esign-api).
+
+**Data to retain (minimum product intent):** Correlation ids (**envelope / agreement id** as returned by the integration), **status timeline** (created, sent, signed, declined, expired), **signer identity** as provided by the integration, **signed PDF** blob or secure object reference, and **linkage** to organization + bank account + portal user who initiated.
+
+**AC:** ACH flow cannot mark an account **fully authorized** until **ownership verification** has succeeded **and** the integration reports **signed** with stored artifact.
+
+**AC:** Borrower can complete signing from the **signing URL** without operations intervention in the happy path.
+
+**AC:** Admin can see **e-sign status** and retrieve or link to the **signed PDF** for support and audit.
+
+**AC:** Expired/voided/declined agreements block draw selection until a **new** agreement is completed (policy detail with legal).
 
 ---
 
@@ -151,7 +177,7 @@ Fields are indicative; schemas belong to engineering.
 | **Organization / Flexline facility** | Borrower entity for limit and draws | Identifiers, facility limit, utilized, available, lifecycle status (Pending/Underwriting/Approved/Accepted/Rejected per internal draft), utilization status (Active/Suspended), repayment anchor policy once defined (§9).   |
 | **Portal user**                      | Login identity                      | Email, auth credentials reference, linkage to organization and role.                                                                                                                                                         |
 | **Contact**                          | Person record from importer/KYC     | KYC payload reference; portal enabled flag; invitation timestamps.                                                                                                                                                           |
-| **Bank account**                     | Disbursement (+ future repayment)   | Holder name, bank name, type, routing, account number (stored securely), mask for display, verification method (Plaid / micro-deposit), verification status, optional **authorization artifact** references (when in scope). |
+| **Bank account**                     | Disbursement (+ future repayment)   | Holder name, bank name, type, routing, account number (stored securely), mask for display, **ownership verification** method (Plaid / micro-deposit) and status, **ACH authorization** status, **Adobe/agreement id**, **signed PDF** reference, timestamps for verification and e-sign milestones. |
 | **Draw**                             | Single draw request / obligation    | Amount, term (3/6 mo), fee quote snapshot, schedule snapshot, disbursement bank account id, status, timestamps, decline reason (if applicable).                                                                              |
 | **Instalment**                       | Scheduled repayment line            | Due date, amounts (principal/interest/fees), state, link to draw(s), aggregation key for monthly total.                                                                                                                      |
 | **Repayment event / marking**        | Ops reconciliation                  | Amount, date, method (manual ACH, wire, etc.), allocations to instalments, operator id, notes.                                                                                                                               |
@@ -198,7 +224,7 @@ flowchart LR
 
 1. **Draw — happy path:** Borrower submits draw → status **Processing** → operations validates limit, bank, and internal checks → funding executed per bank process → status **Funded** → schedule and fees visible on draw detail.
 2. **Draw — decline:** Operations or policy declines → status **Declined** with internal reason code; borrower sees safe messaging.
-3. **Bank verification:** Borrower completes Plaid or micro-deposit path → account **Verified** → eligible for draw disbursement selection.
+3. **Bank account authorization:** Borrower completes **Plaid or micro-deposit** (ownership verified) → portal initiates **ACH authorization letter** via **Adobe eSign (Bluebird API)** → borrower signs → account **fully authorized** → eligible for draw disbursement selection.
 4. **Repayment:** Operations runs **manual ACH** outside portal orchestration → operations records **paid** against instalment(s) → portal reflects paid and **credit availability** updates per agreed rules.
 5. **Exceptions:** NSF, partial payments, holidays shifting ACH—**not defined in MVP PRD**; handled per ops SOP until codified (see §9).
 
@@ -210,9 +236,10 @@ flowchart LR
 | Metric                                  | Type                              | Notes                                                                                  |
 | --------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------- |
 | **100% draws via portal**               | Launch success (from prior draft) | Measure weekly; exclude emergency ops-only draws only if explicitly allowed by policy. |
-| **Time to first verified bank account** | Product health                    | Proposed.                                                                              |
+| **Time to first fully authorized bank account** | Product health            | From add account through ownership verification + ACH signed.                          |
 | **Draw request → Funded median time**   | Ops efficiency                    | Proposed.                                                                              |
 | **Bank verification completion rate**   | UX / ops load                     | Proposed.                                                                              |
+| **ACH authorization signed rate**       | Compliance / funnel health        | % of ownership-verified accounts that reach **signed** within N days; drop-off at e-sign. |
 | **Login success / reset completion**    | Access friction                   | Proposed.                                                                              |
 
 
@@ -221,7 +248,7 @@ flowchart LR
 ## 9. Open questions
 
 1. **Consolidated repayment calendar policy:** Finalize single set of rules for **facility anchor (1st vs 15th)**, **first instalment offset** after draw, **monthly aggregation** across draws, **grace period** before overdue interest, and **overdue interest** mechanics (drafts cite **3-day** grace in one place and **7-day** in others; pilot SOP uses **15th** anchor locked at onboarding).
-2. **ACH debit authorization in MVP vs later:** With **manual ACH** now, does MVP still require full **e-sign + authorization** up front, or **verify-for-disbursement only** and defer mandate until automation?
+2. **ACH letter content and signers:** Final **legal PDF**, required **signatories** (single borrower admin vs dual), **regeneration** when bank details change after signing, and **Adobe text-tag** placement—owned by legal with engineering for upload template.
 3. **Funding rail vs status:** Should **Funded** reflect actual bank settlement, operations confirmation, or both?
 4. **Partial payments and allocation order:** Not decided in drafts.
 5. **Multi-user companies:** Multiple portal users per organization—roles and permissions.
@@ -245,5 +272,6 @@ flowchart LR
 | ---------- | ------- | ---------------------------------------------------------------------- |
 | 2026-04-14 | Product | Initial consolidated MVP PRD from internal drafts and pilot decisions. |
 | 2026-04-14 | Product | Added §4.3.1 borrower bank-verification edge cases and §4.3.2 admin/ops bank + notification requirements. |
+| 2026-04-15 | Product | ACH authorization letter + **Adobe eSign (Bluebird TPA)** after Plaid/micro-deposit; §4.3.3, §4.9, data object and workflow updates; placeholder template under `docs/templates/`. |
 
 
