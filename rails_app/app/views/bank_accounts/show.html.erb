@@ -66,13 +66,14 @@
         <%= render "bank_accounts/plaid_link_launcher", a: a %>
       <% end %>
 
-      <% plaid_demo = !Rails.env.production? || ENV["ALLOW_PLAID_SIMULATION"] == "true" %>
+      <% plaid_test_ui = Rails.env.development? %>
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <% if plaid_demo %>
-          <%= button_to "Simulate Plaid success (demo only)", plaid_complete_bank_account_path(a), method: :post, class: "inline-flex cursor-pointer justify-center rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
-        <% else %>
+        <% if plaid_test_ui %>
+          <%= button_to "Complete verification (local test)", plaid_complete_bank_account_path(a), method: :post, class: "inline-flex cursor-pointer justify-center rounded-lg border border-dashed border-amber-400 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-950 hover:bg-amber-100" %>
+          <p class="text-xs text-amber-900/90">Shown only in development builds.</p>
+        <% elsif !Flexline::PlaidGateway.configured? %>
           <p class="text-xs text-flexline-muted">
-            Plaid completion from this portal is disabled in production until server-side token exchange is configured. Use micro-deposits, or contact your Flexline operations contact.
+            Instant verification with Plaid will appear here when your workspace is configured. You can still complete verification with micro-deposits below, or contact Flexline support.
           </p>
         <% end %>
         <%= button_to "Switch to micro-deposits instead", use_micro_deposits_instead_bank_account_path(a), method: :post, class: "inline-flex cursor-pointer justify-center rounded-lg border border-flexline-border bg-white px-4 py-2.5 text-sm font-semibold text-flexline-navy hover:bg-flexline-sidebar" %>
@@ -99,12 +100,7 @@
           Attempts used: <%= a.micro_deposit_attempts %> of <%= BankAccount::MICRO_DEPOSIT_MAX_ATTEMPTS %>.
         </p>
       <% end %>
-      <% if Rails.env.development? %>
-        <div class="rounded-lg border border-dashed border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-950">
-          <strong>Development only:</strong> expected amounts are <%= format_money(a.micro_deposit_a_cents) %> and <%= format_money(a.micro_deposit_b_cents) %> (order does not matter).
-        </div>
-      <% end %>
-      <%= form_with url: micro_confirm_bank_account_path(a), method: :post, class: "grid gap-4 sm:grid-cols-2" do %>
+      <%= form_with url: micro_confirm_bank_account_path(a), method: :post, local: true, class: "grid gap-4 sm:grid-cols-2" do %>
         <div>
           <%= label_tag :amount_a, "First deposit", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
           <%= text_field_tag :amount_a, nil, placeholder: "0.00", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2" %>
@@ -151,5 +147,4 @@
     </div>
   <% end %>
 
-  <%= render "bank_accounts/verification_playbook" %>
 </div>

@@ -36,14 +36,7 @@
         <header
           class="flex h-14 items-center justify-end gap-4 border-b border-flexline-border px-6"
         >
-          <%= button_to "Sign out", session_path, method: :delete, form_class: "mr-auto inline", class: "text-xs font-semibold text-flexline-muted hover:text-flexline-navy bg-transparent border-0 cursor-pointer p-0" %>
-          <span class="rounded-full p-2 text-flexline-muted" aria-hidden="true">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M12 22a2 2 0 002-2H10a2 2 0 002 2zm6-6V11a6 6 0 10-12 0v5l-2 2v1h16v-1l-2-2z"
-              />
-            </svg>
-          </span>
+          <%= button_to "Sign out", session_path, method: :delete, form: { class: "mr-auto inline" }, class: "text-xs font-semibold text-flexline-muted hover:text-flexline-navy bg-transparent border-0 cursor-pointer p-0" %>
           <div class="flex items-center gap-2">
             <div class="text-right text-sm leading-tight">
               <div class="font-semibold text-flexline-navy"><%= current_user.email %></div>

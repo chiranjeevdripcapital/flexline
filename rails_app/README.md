@@ -48,7 +48,7 @@ The separate **Vite + React** app in [`../web/`](../web/) was an earlier UI spik
 - **Draws:** Borrower submits a draw → status **Processing** → operations uses **`/admin/draws`** (HTTP Basic) to **Approve & fund** (creates instalments, then sets `available_cents` to match **limit − outstanding principal**) or **Decline** (optional borrower-facing reason). Emails are queued when a draw is submitted, funded, or declined. The portal shows **available to draw** as **`credit_limit_cents − outstanding_principal_cents`** (not a separately drifting number).
 - **Importer limits:** `POST /internal/admin/facilities/sync` with header **`X-Flexline-Facility-Token`** updates `credit_limit_cents`, `available_cents`, `portal_status`, and `name` for the row keyed by **`importer_external_id`**. Demo org in seeds uses `importer_external_id: demo-importer-001`.
 - **Portal suspension:** If `portal_status` is **`suspended`**, signed-in users are redirected to **`/portal_suspension`** (draws and bank changes are blocked until sync sets `active` again).
-- **Plaid:** With **`PLAID_CLIENT_ID`** and **`PLAID_SECRET`** set, the bank verification page shows **Open Plaid Link** (token + exchange run on the server). Set **`PLAID_ENV`** to `sandbox`, `development`, or `production`. Optional: **`PLAID_WEBHOOK_URL`** (https), **`PLAID_RETAIN_ACCESS_TOKEN=true`** if you must keep Items instead of removing them after verify (default removes the Item so we do not persist access tokens in pilot).
+- **Plaid:** With **`PLAID_CLIENT_ID`** and **`PLAID_SECRET`** set, the bank verification page shows **Open Plaid Link** (token + exchange run on the server). Set **`PLAID_ENV`** to `sandbox`, `development`, or `production`. Optional: **`PLAID_WEBHOOK_URL`** (https), **`PLAID_RETAIN_ACCESS_TOKEN=true`** if you must keep Items instead of removing them after verify (default removes the Item so access tokens are not stored long-term).
 
 ---
 
@@ -57,7 +57,7 @@ The separate **Vite + React** app in [`../web/`](../web/) was an earlier UI spik
 | Item | What to provide |
 | --- | --- |
 | **Email delivery (production)** | `FLEXLINE_MAILER_FROM`, `APP_HOST`, and either install SMTP ENV (`SMTP_ADDRESS`, … — see `config/initializers/smtp.rb`) or change `MAILER_DELIVERY_METHOD` / use a provider your DevOps prefers. |
-| **Plaid** | Dashboard **client_id** + **secret** → `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`. Without these, only micro-deposit verification and the non-production “simulate” button apply. |
+| **Plaid** | Dashboard **client_id** + **secret** → `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`. Without these, only micro-deposit verification is available in deployed environments. A local-only “complete verification (test)” action exists when `RAILS_ENV=development`. |
 | **Admin UI** | `FLEXLINE_ADMIN_USERNAME` / **`FLEXLINE_ADMIN_PASSWORD`** for `/admin/draws` (defaults in development/test only: `admin` / `development`). |
 | **Importer → portal sync** | A shared secret in **`FLEXLINE_FACILITY_SYNC_TOKEN`** and your admin job POSTing JSON to **`/internal/admin/facilities/sync`** with header **`X-Flexline-Facility-Token`**. |
 | **Security hardening (next engineering pass)** | Encrypt `routing_number` / `account_number` at rest, rotate secrets, and attach real observability—**not** wired in this MVP branch. |

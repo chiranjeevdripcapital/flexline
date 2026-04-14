@@ -6,8 +6,7 @@ class BankAccount < ApplicationRecord
   belongs_to :organization
   has_many :draws, dependent: :restrict_with_error
 
-  # NOTE: routing_number/account_number are stored for MVP/demo only.
-  # Before production: encrypt at rest (Rails Active Record encryption / Lockbox) and tighten access controls.
+  # NOTE: routing_number/account_number require encryption at rest and strict access controls before production launch.
 
   VERIFICATION_STATUSES = %w[
     incomplete

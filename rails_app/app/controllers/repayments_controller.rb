@@ -5,7 +5,7 @@ class RepaymentsController < ApplicationController
     @installments =
       Installment
         .joins(:draw)
-        .where(draws: { organization_id: current_organization.id })
+        .where(draws: { organization_id: current_organization.id, status: "funded" })
         .includes(:draw)
         .due_first
   end

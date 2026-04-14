@@ -2,7 +2,7 @@
   <div>
     <h1 class="text-2xl font-bold text-flexline-navy">Repayments</h1>
     <p class="mt-1 text-sm text-flexline-muted">
-      Instalments generated when a draw is funded (equal principal split for now; interest/fees are PRD follow-ups).
+      Each funded draw adds instalments with due dates. Status updates when payments are recorded against your facility.
     </p>
   </div>
 
@@ -23,6 +23,7 @@
               <th class="px-4 py-3">Principal</th>
               <th class="px-4 py-3">Interest</th>
               <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -37,6 +38,9 @@
                 <td class="px-4 py-3 text-flexline-muted"><%= format_money(row.interest_cents) %></td>
                 <td class="px-4 py-3">
                   <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= cls %>"><%= row.status.titleize %></span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <%= link_to "View draw ›", draw_request_path(row.draw), class: "text-sm font-semibold text-flexline-green hover:underline" %>
                 </td>
               </tr>
             <% end %>

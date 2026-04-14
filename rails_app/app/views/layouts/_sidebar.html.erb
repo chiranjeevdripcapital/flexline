@@ -19,7 +19,9 @@
     <%= nav_link_to "Repayments", repayments_path %>
   </nav>
   <div class="border-t border-flexline-border p-4 text-xs text-flexline-muted">
-    <div class="font-semibold text-flexline-navy">Account manager</div>
-    <div class="mt-1">Ops support (placeholder)</div>
+    <div class="font-semibold text-flexline-navy">Need your schedule?</div>
+    <div class="mt-2">
+      <%= link_to "Open repayment schedule ›", repayments_path, class: "font-semibold text-flexline-green hover:underline" %>
+    </div>
   </div>
 </aside>

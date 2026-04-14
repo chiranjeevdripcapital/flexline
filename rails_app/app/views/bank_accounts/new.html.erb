@@ -14,7 +14,7 @@
     </ul>
   </div>
 
-  <%= form_with model: @bank_account, url: bank_accounts_path, class: "space-y-5 rounded-xl border border-flexline-border bg-white p-6 shadow-card" do |f| %>
+  <%= form_with model: @bank_account, url: bank_accounts_path, local: true, class: "space-y-5 rounded-xl border border-flexline-border bg-white p-6 shadow-card" do |f| %>
     <% if @bank_account.errors.any? %>
       <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
         <%= @bank_account.errors.full_messages.to_sentence %>
@@ -88,7 +88,7 @@
     </div>
 
     <p class="text-xs leading-relaxed text-flexline-muted">
-      For this pilot, sensitive numbers are stored for demo purposes. Before production, engineering will enable encryption at rest, tighten access logging, and wire Plaid server-side token exchange.
+      Bank details are transmitted securely over HTTPS. Your organization should follow its security policy for shared workstations and approved browsers.
     </p>
 
     <div class="flex flex-wrap gap-3">
@@ -97,5 +97,4 @@
     </div>
   <% end %>
 
-  <%= render "bank_accounts/verification_playbook" %>
 </div>

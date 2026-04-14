@@ -13,7 +13,7 @@
     </div>
   <% end %>
 
-  <%= form_with model: @draw, url: draw_requests_path, class: "space-y-5 rounded-xl border border-flexline-border bg-white p-6 shadow-card" do |f| %>
+  <%= form_with model: @draw, url: draw_requests_path, local: true, class: "space-y-5 rounded-xl border border-flexline-border bg-white p-6 shadow-card" do |f| %>
     <% if @draw.errors.any? %>
       <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
         <%= @draw.errors.full_messages.to_sentence %>
@@ -46,7 +46,7 @@
     </div>
 
     <section class="rounded-lg border border-flexline-border bg-flexline-table-head/50 p-4 text-sm text-flexline-muted">
-      <strong class="text-flexline-navy">Note:</strong> fees/interest are not finance-final yet; instalments are an equal-principal stub for engineering demos.
+      <strong class="text-flexline-navy">Note:</strong> Fees, interest, and the exact repayment calendar follow your facility agreement. The schedule shown after funding is for visibility until your terms are fully configured in the system.
     </section>
 
     <div class="flex flex-wrap gap-3">

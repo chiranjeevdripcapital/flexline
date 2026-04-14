@@ -182,8 +182,9 @@ class BankAccountsController < ApplicationController
     )
   end
 
+  # Plaid "complete without Link" is for local development only — not shown in customer-facing UAT/production.
   def plaid_simulation_allowed?
-    !Rails.env.production? || ENV["ALLOW_PLAID_SIMULATION"] == "true"
+    Rails.env.development?
   end
 
   def dollars_to_cents(raw)
