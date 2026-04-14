@@ -19,6 +19,21 @@ class Organization < ApplicationRecord
     portal_status == "active"
   end
 
+  # Principal on funded draws that is not yet marked paid (scheduled instalments).
+  # No funded draws or no schedule yet → 0.
+  def outstanding_principal_cents
+    Installment
+      .joins(:draw)
+      .where(draws: { organization_id: id, status: "funded" })
+      .where(installments: { status: "scheduled" })
+      .sum(:principal_cents)
+  end
+
+  # Borrower-facing headroom: facility limit minus unpaid principal on funded draws.
+  def available_for_draws_cents
+    [ credit_limit_cents.to_i - outstanding_principal_cents.to_i, 0 ].max
+  end
+
   def public_draw_code(draw)
     return "DRAFT" unless draw.id
 

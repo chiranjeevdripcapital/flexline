@@ -29,7 +29,8 @@ class DrawTest < ActiveSupport::TestCase
     assert draw.approve_and_fund!
     draw.reload
     assert_equal "funded", draw.status
-    assert_equal 150_000, @org.reload.available_cents
+    assert_equal 450_000, @org.reload.available_cents
+    assert_equal 450_000, @org.available_for_draws_cents
     assert_equal 6, draw.installments.count
   end
 

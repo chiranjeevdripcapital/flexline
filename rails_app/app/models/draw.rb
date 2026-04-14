@@ -29,14 +29,15 @@ class Draw < ApplicationRecord
     transaction do
       organization.with_lock do
         organization.reload
-        if organization.available_cents < amount_cents
+        if amount_cents > organization.available_for_draws_cents
           errors.add(:amount_cents, "exceeds available credit")
           raise ActiveRecord::Rollback
         end
 
         create_installment_schedule!
         update!(status: "funded", funded_at: Time.current, decline_reason: nil)
-        organization.update!(available_cents: organization.available_cents - amount_cents)
+        organization.reload
+        organization.update!(available_cents: organization.available_for_draws_cents)
       end
     end
 
@@ -67,7 +68,7 @@ class Draw < ApplicationRecord
   def amount_within_available_credit
     return if organization.blank? || amount_cents.blank?
 
-    errors.add(:amount_cents, "exceeds available credit") if amount_cents > organization.available_cents
+    errors.add(:amount_cents, "exceeds available credit") if amount_cents > organization.available_for_draws_cents
   end
 
   def bank_account_belongs_to_organization

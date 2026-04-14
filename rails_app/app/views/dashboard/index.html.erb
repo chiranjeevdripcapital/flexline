@@ -1,7 +1,7 @@
 <% org = @organization %>
 <% limit = org.credit_limit_cents.to_i %>
-<% available = org.available_cents.to_i %>
-<% utilized = [ limit - available, 0 ].max %>
+<% available = org.available_for_draws_cents.to_i %>
+<% outstanding = org.outstanding_principal_cents.to_i %>
 <% pct = limit.positive? ? ((available.to_f / limit) * 360).round : 0 %>
 
 <div class="mx-auto max-w-6xl space-y-8">
@@ -12,17 +12,17 @@
         View your facility, request draws, and track repayments.
       </p>
     </div>
-    <%= link_to new_draw_request_path, class: "inline-flex items-center justify-center gap-2 rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" do %>
+    <%= link_to new_draw_request_path, class: "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" do %>
       Request draw <span aria-hidden="true">›</span>
     <% end %>
   </div>
 
-  <div class="grid gap-4 lg:grid-cols-3">
-    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card lg:col-span-2">
+  <div class="grid items-stretch gap-4 lg:grid-cols-3">
+    <section class="flex flex-col rounded-xl border border-flexline-border bg-white p-5 shadow-card lg:col-span-2">
       <h2 class="text-sm font-semibold text-flexline-navy">Available credit</h2>
-      <div class="mt-4 flex flex-wrap items-center gap-8">
+      <div class="mt-4 flex flex-1 flex-wrap items-center gap-8">
         <div
-          class="relative grid h-28 w-28 place-items-center rounded-full"
+          class="relative grid h-28 w-28 shrink-0 place-items-center rounded-full"
           style="background: conic-gradient(#2BB673 0deg <%= pct %>deg, #e3eef6 <%= pct %>deg 360deg);"
           aria-hidden="true"
         >
@@ -37,10 +37,13 @@
         </div>
         <div class="min-w-0 flex-1 space-y-2 text-sm">
           <div class="flex justify-between gap-4">
-            <span class="text-flexline-muted">Utilized</span>
-            <span class="font-semibold text-flexline-navy"><%= format_money(utilized) %></span>
+            <span class="text-flexline-muted">Outstanding</span>
+            <span class="font-semibold text-flexline-navy"><%= format_money(outstanding) %></span>
           </div>
-          <div class="flex justify-between gap-4">
+          <p class="text-[11px] leading-snug text-flexline-muted">
+            Unpaid principal on funded draws (repayment schedule). Zero if you have never had a funded draw.
+          </p>
+          <div class="flex justify-between gap-4 border-t border-flexline-border pt-2">
             <span class="text-flexline-muted">Available</span>
             <span class="font-semibold text-flexline-green"><%= format_money(available) %></span>
           </div>
@@ -49,16 +52,16 @@
       </div>
     </section>
 
-    <section class="rounded-xl border border-sky-100 bg-sky-50/80 p-5 shadow-card">
-      <div class="flex items-start gap-3">
-        <div class="rounded-lg bg-white p-2 text-flexline-navy shadow-sm">
+    <section class="flex flex-col rounded-xl border border-sky-100 bg-sky-50/80 p-5 shadow-card">
+      <div class="flex flex-1 items-start gap-3">
+        <div class="shrink-0 rounded-lg bg-white p-2 text-flexline-navy shadow-sm">
           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path
               d="M12 22a2 2 0 002-2H10a2 2 0 002 2zm6-6V11a6 6 0 10-12 0v5l-2 2v1h16v-1l-2-2z"
             />
           </svg>
         </div>
-        <div>
+        <div class="min-w-0">
           <h2 class="text-sm font-semibold text-flexline-navy">Notifications</h2>
           <p class="mt-2 text-xs leading-relaxed text-flexline-muted">
             Your recent notifications will appear here.
@@ -68,34 +71,32 @@
     </section>
   </div>
 
-  <div class="grid gap-4 md:grid-cols-2">
-    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">
+  <div class="grid items-stretch gap-4 md:grid-cols-2">
+    <section class="flex min-h-[11rem] flex-col rounded-xl border border-flexline-border bg-white p-5 shadow-card">
       <h2 class="text-sm font-semibold text-flexline-navy">Bank accounts</h2>
-      <p class="mt-1 text-xs text-flexline-muted">
+      <p class="mt-1 flex-1 text-xs leading-relaxed text-flexline-muted">
         Add and verify accounts for disbursement.
       </p>
-      <%= link_to "Manage bank accounts ›", bank_accounts_path, class: "mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-flexline-green bg-white px-4 py-2.5 text-sm font-semibold text-flexline-green transition hover:bg-emerald-50" %>
+      <%= link_to "Manage bank accounts ›", bank_accounts_path, class: "mt-4 inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-flexline-green bg-white px-4 py-2.5 text-sm font-semibold text-flexline-green transition hover:bg-emerald-50" %>
     </section>
-    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">
+    <section class="flex min-h-[11rem] flex-col rounded-xl border border-flexline-border bg-white p-5 shadow-card">
       <h2 class="text-sm font-semibold text-flexline-navy">Repayments</h2>
-      <p class="mt-1 text-xs text-flexline-muted">
+      <p class="mt-1 flex-1 text-xs leading-relaxed text-flexline-muted">
         Instalments created from funded draws (demo schedule; not finance-final).
       </p>
-      <%= link_to "Open repayments ›", repayments_path, class: "mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-flexline-green bg-white px-4 py-2.5 text-sm font-semibold text-flexline-green transition hover:bg-emerald-50" %>
+      <%= link_to "Open repayments ›", repayments_path, class: "mt-4 inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-flexline-green bg-white px-4 py-2.5 text-sm font-semibold text-flexline-green transition hover:bg-emerald-50" %>
     </section>
   </div>
 
   <section class="overflow-hidden rounded-xl border border-flexline-border bg-white shadow-card">
-    <div class="border-b border-flexline-border bg-flexline-table-head px-4 py-3">
+    <div class="border-b border-flexline-border px-4 py-3">
       <h2 class="text-sm font-semibold text-flexline-navy">Recent draws</h2>
     </div>
     <% if @draws.any? %>
       <div class="overflow-x-auto">
         <table class="min-w-full text-left text-sm">
           <thead>
-            <tr
-              class="border-b border-flexline-border bg-flexline-table-head text-xs font-semibold uppercase tracking-wide text-flexline-navy"
-            >
+            <tr class="border-b border-flexline-border bg-slate-50/90 text-xs font-semibold uppercase tracking-wide text-flexline-navy">
               <th class="px-4 py-3">Draw ID</th>
               <th class="px-4 py-3">Amount</th>
               <th class="px-4 py-3">Term</th>

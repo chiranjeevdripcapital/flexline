@@ -24,7 +24,7 @@
       <%= label_tag "draw_amount_dollars", "Draw amount (USD)", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
       <%= text_field_tag "draw[amount_dollars]", @amount_dollars_raw, id: "draw_amount_dollars", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm font-medium text-flexline-navy outline-none ring-flexline-green focus:ring-2" %>
       <p class="mt-1 text-xs text-flexline-muted">
-        Available: <span class="font-semibold"><%= format_money(current_organization.available_cents) %></span>
+        Available: <span class="font-semibold"><%= format_money(current_organization.available_for_draws_cents) %></span>
       </p>
     </div>
 
