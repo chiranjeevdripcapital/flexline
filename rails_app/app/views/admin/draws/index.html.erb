@@ -1,34 +1,89 @@
-<section class="rounded-xl border border-slate-200 bg-white p-5 shadow">
-  <h2 class="text-sm font-semibold text-slate-800">Recent draw requests</h2>
-  <div class="mt-4 overflow-x-auto">
-    <table class="min-w-full text-left text-sm">
-      <thead>
-        <tr class="border-b text-xs font-semibold uppercase text-slate-500">
-          <th class="py-2 pr-4">Ref</th>
-          <th class="py-2 pr-4">Company</th>
-          <th class="py-2 pr-4">Amount</th>
-          <th class="py-2 pr-4">Term</th>
-          <th class="py-2 pr-4">Status</th>
-          <th class="py-2 text-right">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @draws.each do |draw| %>
-          <tr class="border-b border-slate-100 last:border-0">
-            <td class="py-2 pr-4 font-medium"><%= draw.public_code %></td>
-            <td class="py-2 pr-4"><%= draw.organization.name %></td>
-            <td class="py-2 pr-4"><%= number_to_currency(draw.amount_cents.to_d / 100, unit: "$") %></td>
-            <td class="py-2 pr-4"><%= draw.term_months %> mo</td>
-            <td class="py-2 pr-4"><%= draw.status.titleize %></td>
-            <td class="py-2 text-right">
-              <%= link_to "Open ›", admin_draw_path(draw), class: "font-semibold text-emerald-700 hover:underline" %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+<section class="space-y-4">
+  <div class="rounded-xl border border-slate-200 bg-white p-5 shadow">
+    <h2 class="text-sm font-semibold text-slate-800">Draw queue</h2>
+    <%= form_with url: admin_draws_path, method: :get, local: true, class: "mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4" do %>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-500">Search</label>
+        <%= text_field_tag :q, params[:q], placeholder: "Company name or draw id", class: "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" %>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-500">Status</label>
+        <%= select_tag :status, options_for_select([ [ "Any", "" ] ] + Draw::STATUSES.map { |s| [ s.titleize, s ] }, params[:status]), class: "mt-1 w-full rounded-lg border border-slate-300 px-2 py-2" %>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-500">Created from</label>
+        <%= date_field_tag :from, params[:from], class: "mt-1 w-full rounded-lg border border-slate-300 px-2 py-2" %>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-500">Created to</label>
+        <%= date_field_tag :to, params[:to], class: "mt-1 w-full rounded-lg border border-slate-300 px-2 py-2" %>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-500">Sort</label>
+        <%= select_tag :sort,
+          options_for_select(
+            [
+              [ "Newest first", "" ],
+              [ "Oldest first", "oldest" ],
+              [ "Amount high → low", "amount_high" ],
+              [ "Amount low → high", "amount_low" ]
+            ],
+            params[:sort]
+          ),
+          class: "mt-1 w-full rounded-lg border border-slate-300 px-2 py-2" %>
+      </div>
+      <div class="flex items-end gap-2 sm:col-span-2">
+        <%= submit_tag "Apply filters", class: "cursor-pointer rounded-lg bg-slate-800 px-4 py-2 font-semibold text-white hover:bg-slate-900" %>
+        <%= link_to "Reset", admin_draws_path, class: "font-semibold text-emerald-700 hover:underline" %>
+        <%= link_to "Export CSV", admin_draws_path(request.query_parameters.merge(format: :csv)), class: "font-semibold text-emerald-700 hover:underline" %>
+      </div>
+    <% end %>
+    <p class="mt-2 text-xs text-slate-500">Showing up to 100 rows. Refine filters or export CSV for more.</p>
   </div>
-  <% if @draws.empty? %>
-    <p class="mt-4 text-sm text-slate-500">No draws yet.</p>
-  <% end %>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-5 shadow">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-left text-sm">
+        <thead>
+          <tr class="border-b text-xs font-semibold uppercase text-slate-500">
+            <th class="py-2 pr-4">Ref</th>
+            <th class="py-2 pr-4">Company</th>
+            <th class="py-2 pr-4">Amount</th>
+            <th class="py-2 pr-4">Term</th>
+            <th class="py-2 pr-4">Status</th>
+            <th class="py-2 pr-4">Age (queue)</th>
+            <th class="py-2 pr-4">Bank mask</th>
+            <th class="py-2 pr-4">Submitted</th>
+            <th class="py-2 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @draws.each do |draw| %>
+            <tr class="border-b border-slate-100 last:border-0">
+              <td class="py-2 pr-4 font-medium"><%= draw.public_code %></td>
+              <td class="py-2 pr-4"><%= draw.organization.name %></td>
+              <td class="py-2 pr-4"><%= number_to_currency(draw.amount_cents.to_d / 100, unit: "$") %></td>
+              <td class="py-2 pr-4"><%= draw.term_months %> mo</td>
+              <td class="py-2 pr-4"><%= draw.status.titleize %></td>
+              <td class="py-2 pr-4 text-slate-600">
+                <% if draw.status == "processing" %>
+                  <%= time_ago_in_words(draw.created_at) %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+              <td class="py-2 pr-4">···<%= draw.bank_account.mask_last4 %></td>
+              <td class="py-2 pr-4 text-slate-600"><%= l(draw.created_at, format: :short) %></td>
+              <td class="py-2 text-right">
+                <%= link_to "Open ›", admin_draw_path(draw), class: "font-semibold text-emerald-700 hover:underline" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <% if @draws.empty? %>
+      <p class="mt-4 text-sm text-slate-500">No draws match.</p>
+    <% end %>
+  </div>
 </section>

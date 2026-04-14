@@ -1,0 +1,35 @@
+<section class="space-y-6">
+  <div class="rounded-xl border border-slate-200 bg-white p-5 shadow">
+    <h2 class="text-sm font-semibold text-slate-800">Draws by status</h2>
+    <ul class="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+      <% @draw_counts.each do |status, count| %>
+        <li class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+          <span class="capitalize text-slate-700"><%= status %></span>
+          <%= link_to count, admin_draws_path(status: status), class: "font-bold text-emerald-700 hover:underline" %>
+        </li>
+      <% end %>
+      <% if @draw_counts.empty? %>
+        <li class="text-slate-500">No draws yet.</li>
+      <% end %>
+    </ul>
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-5 shadow">
+    <h2 class="text-sm font-semibold text-slate-800">Bank accounts by verification status</h2>
+    <ul class="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+      <% @bank_counts.sort.each do |status, count| %>
+        <li class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+          <span class="text-slate-700"><%= status.titleize %></span>
+          <%= link_to count, admin_bank_accounts_path(verification_status: status), class: "font-bold text-emerald-700 hover:underline" %>
+        </li>
+      <% end %>
+      <% if @bank_counts.empty? %>
+        <li class="text-slate-500">No bank accounts.</li>
+      <% end %>
+    </ul>
+  </div>
+
+  <p class="text-sm text-slate-600">
+    Use <strong>Draws</strong> for search, filters, sort, and CSV export. Counts above link to pre-filtered lists where applicable.
+  </p>
+</section>

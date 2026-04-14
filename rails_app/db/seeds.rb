@@ -53,3 +53,55 @@ pending_micro.update_columns(
   micro_deposit_b_cents: 41,
   micro_deposit_sent_at: 2.days.ago
 )
+
+# Second borrower org + user (switch logins to compare two facilities in portal + admin).
+org2 = Organization.find_or_initialize_by(importer_external_id: "demo-importer-002")
+org2.assign_attributes(
+  name: "Second Pilot LLC",
+  credit_limit_cents: 12_000_000,
+  available_cents: 10_000_000,
+  portal_status: "active"
+)
+org2.save!
+
+user2 = User.find_or_initialize_by(email: "pilot2@example.com")
+user2.organization = org2
+user2.password = "password123"
+user2.password_confirmation = "password123"
+user2.save!
+
+fp3 = BankAccount.fingerprint_for("021000021", "9900000003322")
+ba2 = BankAccount.find_or_initialize_by(organization: org2, account_fingerprint: fp3)
+ba2.assign_attributes(
+  display_name: "Operating · Chase",
+  legal_name_on_account: "Second Pilot LLC",
+  account_type: "checking",
+  routing_number: "021000021",
+  account_number: "9900000003322",
+  mask_last4: "3322",
+  verification_status: "verified",
+  verification_method: "plaid",
+  primary_for_disbursement: true,
+  plaid_item_id: "seed_item_2",
+  plaid_account_id: "seed_account_2"
+)
+ba2.save!(context: :details)
+
+# One processing draw per demo org so `/admin` and `/admin/draws` show a queue without manual setup.
+unless org.draws.where(status: "processing").exists?
+  org.draws.create!(
+    bank_account: verified,
+    amount_cents: 250_000,
+    term_months: 6,
+    status: "processing"
+  )
+end
+
+unless org2.draws.where(status: "processing").exists?
+  org2.draws.create!(
+    bank_account: ba2,
+    amount_cents: 180_000,
+    term_months: 3,
+    status: "processing"
+  )
+end

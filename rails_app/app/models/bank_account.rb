@@ -5,6 +5,7 @@ require "digest"
 class BankAccount < ApplicationRecord
   belongs_to :organization
   has_many :draws, dependent: :restrict_with_error
+  has_many :admin_events, dependent: :nullify
 
   # NOTE: routing_number/account_number require encryption at rest and strict access controls before production launch.
 

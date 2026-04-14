@@ -5,9 +5,20 @@ class Draw < ApplicationRecord
   belongs_to :bank_account
 
   has_many :installments, dependent: :destroy
+  has_many :admin_events, dependent: :nullify
 
   STATUSES = %w[processing funded declined].freeze
   TERMS = [ 3, 6 ].freeze
+
+  # Internal-only taxonomy for ops reporting (borrower sees decline_reason).
+  INTERNAL_DECLINE_CODES = {
+    "limit_headroom" => "Insufficient available credit / headroom",
+    "bank_verification" => "Bank or verification concern",
+    "policy" => "Credit or policy",
+    "documentation" => "Documentation or KYC",
+    "duplicate_request" => "Duplicate or superseded request",
+    "other" => "Other (see notes / borrower reason)"
+  }.freeze
 
   validates :amount_cents, numericality: { greater_than: 0 }
   validates :term_months, inclusion: { in: TERMS }
@@ -17,6 +28,9 @@ class Draw < ApplicationRecord
   validate :amount_within_available_credit, on: :create
 
   scope :recent_first, -> { order(created_at: :desc) }
+  scope :oldest_first, -> { order(created_at: :asc) }
+  scope :by_amount_desc, -> { order(amount_cents: :desc, id: :desc) }
+  scope :by_amount_asc, -> { order(amount_cents: :asc, id: :asc) }
 
   # Operations approves after risk review; creates instalments and debits availability.
   def approve_and_fund!
@@ -44,16 +58,22 @@ class Draw < ApplicationRecord
     errors.empty? && status == "funded"
   end
 
-  def decline!(reason:)
+  def decline!(reason:, internal_decline_code: nil)
     errors.clear
     unless status == "processing"
       errors.add(:status, "must be processing to decline")
       return false
     end
 
+    if internal_decline_code.present? && INTERNAL_DECLINE_CODES[internal_decline_code].blank?
+      errors.add(:internal_decline_code, "is not a valid code")
+      return false
+    end
+
     update!(
       status: "declined",
       decline_reason: reason.presence || "Declined by operations.",
+      internal_decline_code: internal_decline_code.presence,
       funded_at: nil
     )
     true

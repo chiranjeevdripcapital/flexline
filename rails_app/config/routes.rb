@@ -25,10 +25,14 @@ Rails.application.routes.draw do
   resources :repayments, only: %i[index]
 
   namespace :admin do
+    root "dashboard#index"
+    resources :organizations, only: %i[index show]
+    resources :bank_accounts, only: %i[index]
     resources :draws, only: %i[index show] do
       member do
         post :approve
         post :decline
+        patch :update_notes
       end
     end
   end

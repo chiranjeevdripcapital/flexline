@@ -1,7 +1,7 @@
 # Flexline — MVP Product Requirements Document (PRD)
 
 **Status:** Draft for pilot MVP  
-**Last updated:** 2026-04-17  
+**Last updated:** 2026-04-17 (§3.5 Phase 1 shipped)  
 **UI note:** No bespoke visual design in MVP; use platform defaults unless layout is specified below because it affects requirements.
 
 ---
@@ -88,9 +88,9 @@ Design assumption: a small ops team will **not** scale by opening each company i
 
 - Queue depth by type, **median / p95 time** draw submitted → funded (or to decline), verification and e-sign funnel drop-off—captured in §8 where marked for ops scale.
 
-### 3.5 Engineering deliverables — Flexline `rails_app` admin (pending product confirmation)
+### 3.5 Engineering deliverables — Flexline `rails_app` admin (Phase 1 — confirmed & implemented)
 
-**Status:** Documented below for alignment. **Engineering must not start this build until product explicitly confirms** (reply or ticket). Scope is **Phase 1** in the existing **HTTP Basic** admin area unless replaced by shared internal auth later.
+**Status:** Product confirmed **2026-04-17**. **Phase 1** is implemented in the **HTTP Basic** admin namespace (`/admin`, …). Further phases (RBAC, dual control, etc.) remain out of scope here.
 
 **Phase 1 (proposed build on confirmation)**
 
@@ -333,5 +333,6 @@ flowchart LR
 | 2026-04-15 | Product | ACH authorization letter + **Adobe eSign (Bluebird TPA)** after Plaid/micro-deposit; §4.3.3, §4.9, data object and workflow updates; placeholder template under `docs/templates/`. |
 | 2026-04-16 | Product | §3.4 operator-at-scale requirements; §3.5 **pending-confirmation** engineering deliverables for Rails admin; §5 AdminEvent + draw notes; §8 ops metrics; Operations persona pointer. |
 | 2026-04-17 | Product | §4.5 **one ACH per payment date**; explicit **ACH debit amount** on schedule + per-draw breakdown; §4.5.1 consolidated status rules; §5 Instalment note; §7 repayment workflow; §9 Q1 split decided vs TBD. |
+| 2026-04-17 | Product | §3.5 Phase 1 **confirmed**; Rails admin: `/admin` dashboard, draws filters/CSV/notes/decline codes, org + bank indexes, `AdminEvent` audit. |
 
 

@@ -22,12 +22,14 @@ Visit `http://localhost:3000` (you’ll be redirected to sign in).
 
 ### Demo credentials (from `db/seeds.rb`)
 
-- **Email:** `pilot@example.com`
-- **Password:** `password123`
+| Login | Password | Organization |
+| --- | --- | --- |
+| `pilot@example.com` | `password123` | Demo Company Ltd. (`demo-importer-001`) |
+| `pilot2@example.com` | `password123` | Second Pilot LLC (`demo-importer-002`) |
 
-This seeds an organization (`importer_external_id: demo-importer-001`) with a credit line, a verified bank account, and a second account waiting on micro-deposits.
+Each org has a **verified** bank account and a **sample draw in Processing** so you can exercise **`/admin`** (overview), **`/admin/draws`** (filters + CSV), **`/admin/organizations`**, **`/admin/bank_accounts`**, approve/decline, **operator notes**, and **admin event** audit without manual setup. The first org also keeps a second bank account on **micro-deposits**.
 
-**Operations console:** `/admin/draws` (set `FLEXLINE_ADMIN_PASSWORD` in production; development defaults to user `admin` / password `development`).
+**Operations console:** HTTP Basic — development defaults to user **`admin`** / password **`development`**. Set `FLEXLINE_ADMIN_USERNAME` / `FLEXLINE_ADMIN_PASSWORD` in production. Start at **`/admin`** (overview with counts) or **`/admin/draws`**.
 
 ### CSS watch (development)
 

@@ -6,6 +6,7 @@ class Organization < ApplicationRecord
   has_many :users, dependent: :destroy
   has_many :bank_accounts, dependent: :destroy
   has_many :draws, dependent: :destroy
+  has_many :admin_events, dependent: :nullify
 
   validates :name, presence: true
   validates :credit_limit_cents, numericality: { greater_than: 0 }

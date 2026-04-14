@@ -10,7 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_15_120007) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_15_120008) do
+  create_table "admin_events", force: :cascade do |t|
+    t.string "action", null: false
+    t.string "actor_identifier", null: false
+    t.integer "organization_id"
+    t.integer "draw_id"
+    t.integer "bank_account_id"
+    t.json "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["action"], name: "index_admin_events_on_action"
+    t.index ["bank_account_id"], name: "index_admin_events_on_bank_account_id"
+    t.index ["created_at"], name: "index_admin_events_on_created_at"
+    t.index ["draw_id"], name: "index_admin_events_on_draw_id"
+    t.index ["organization_id"], name: "index_admin_events_on_organization_id"
+  end
+
   create_table "bank_accounts", force: :cascade do |t|
     t.integer "organization_id", null: false
     t.string "display_name", null: false
@@ -46,6 +62,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_15_120007) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "decline_reason"
+    t.text "operator_notes"
+    t.string "internal_decline_code"
     t.index ["bank_account_id"], name: "index_draws_on_bank_account_id"
     t.index ["organization_id"], name: "index_draws_on_organization_id"
   end
@@ -85,6 +103,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_15_120007) do
     t.index ["organization_id"], name: "index_users_on_organization_id"
   end
 
+  add_foreign_key "admin_events", "bank_accounts"
+  add_foreign_key "admin_events", "draws"
+  add_foreign_key "admin_events", "organizations"
   add_foreign_key "bank_accounts", "organizations"
   add_foreign_key "draws", "bank_accounts"
   add_foreign_key "draws", "organizations"

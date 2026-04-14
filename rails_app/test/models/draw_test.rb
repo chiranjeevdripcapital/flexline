@@ -36,10 +36,17 @@ class DrawTest < ActiveSupport::TestCase
 
   test "decline sets status and reason" do
     draw = @org.draws.create!(bank_account: @bank, amount_cents: 10_000, term_months: 3, status: "processing")
-    assert draw.decline!(reason: "Policy check")
+    assert draw.decline!(reason: "Policy check", internal_decline_code: "policy")
     draw.reload
     assert_equal "declined", draw.status
     assert_includes draw.decline_reason, "Policy"
+    assert_equal "policy", draw.internal_decline_code
+  end
+
+  test "decline rejects unknown internal code" do
+    draw = @org.draws.create!(bank_account: @bank, amount_cents: 10_000, term_months: 3, status: "processing")
+    assert_not draw.decline!(reason: "x", internal_decline_code: "not_a_real_code")
+    assert_equal "processing", draw.reload.status
   end
 
   test "create draw rejects amount above available" do
