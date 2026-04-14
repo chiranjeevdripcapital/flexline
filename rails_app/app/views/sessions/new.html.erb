@@ -1,0 +1,17 @@
+<div class="w-full max-w-md rounded-xl border border-flexline-border bg-white p-8 shadow-card">
+  <h1 class="text-xl font-bold text-flexline-navy">Sign in</h1>
+  <p class="mt-1 text-sm text-flexline-muted">
+    Standalone pilot login (Rails MVP scaffold — no real auth yet).
+  </p>
+  <%= form_with url: session_path, method: :post, local: true, class: "mt-6 space-y-4" do %>
+    <div>
+      <%= label_tag :email, "Email", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+      <%= email_field_tag :email, nil, autocomplete: "username", placeholder: "you@company.com", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2" %>
+    </div>
+    <div>
+      <%= label_tag :password, "Password", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+      <%= password_field_tag :password, nil, autocomplete: "current-password", placeholder: "••••••••", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2" %>
+    </div>
+    <%= submit_tag "Continue", class: "w-full cursor-pointer rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
+  <% end %>
+</div>

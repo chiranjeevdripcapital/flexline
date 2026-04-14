@@ -1,0 +1,28 @@
+<div class="mx-auto max-w-3xl space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold text-flexline-navy">Bank accounts</h1>
+    <p class="mt-1 text-sm text-flexline-muted">
+      Verified accounts can be used for draw disbursement. Plaid / micro-deposit flows
+      will connect here in a later milestone.
+    </p>
+  </div>
+
+  <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">
+    <div class="flex items-center justify-between gap-4">
+      <h2 class="text-sm font-semibold text-flexline-navy">Your accounts</h2>
+      <%= link_to "Add bank account", new_bank_account_path, class: "inline-flex items-center justify-center gap-2 rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
+    </div>
+    <ul class="mt-4 divide-y divide-flexline-border rounded-lg border border-flexline-border">
+      <% @accounts.each do |a| %>
+        <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <span class="text-sm font-medium text-flexline-navy"><%= a[:label] %></span>
+          <% badge =
+            a[:status] == "Verified" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-flexline-pending text-flexline-pending-text" %>
+          <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= badge %>">
+            <%= a[:status] == "Pending" ? "Pending verification" : a[:status] %>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+</div>

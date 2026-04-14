@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Flexline — Sign in</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+  </head>
+  <body class="min-h-screen bg-flexline-sidebar font-sans text-flexline-ink">
+    <header class="border-b border-flexline-border bg-white px-6 py-4">
+      <span class="text-lg font-bold text-flexline-navy">Flexline</span>
+    </header>
+    <div class="flex flex-1 items-center justify-center p-6"><%= yield %></div>
+  </body>
+</html>

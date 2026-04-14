@@ -1,0 +1,128 @@
+<div class="mx-auto max-w-6xl space-y-8">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-flexline-navy">Dashboard</h1>
+      <p class="mt-1 text-sm text-flexline-muted">
+        View your facility, request draws, and track repayments.
+      </p>
+    </div>
+    <%= link_to new_draw_request_path, class: "inline-flex items-center justify-center gap-2 rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" do %>
+      Request draw <span aria-hidden="true">›</span>
+    <% end %>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card lg:col-span-2">
+      <h2 class="text-sm font-semibold text-flexline-navy">Available credit</h2>
+      <div class="mt-4 flex flex-wrap items-center gap-8">
+        <div
+          class="relative grid h-28 w-28 place-items-center rounded-full"
+          style="background: conic-gradient(#2BB673 0deg 210deg, #e3eef6 210deg 360deg);"
+          aria-hidden="true"
+        >
+          <div
+            class="absolute inset-2 grid place-items-center rounded-full bg-white text-center text-xs font-semibold text-flexline-navy shadow-inner"
+          >
+            <div>
+              <div class="text-lg leading-tight">$87.5k</div>
+              <div class="text-[10px] font-normal text-flexline-muted">of $150k</div>
+            </div>
+          </div>
+        </div>
+        <div class="min-w-0 flex-1 space-y-2 text-sm">
+          <div class="flex justify-between gap-4">
+            <span class="text-flexline-muted">Utilized</span>
+            <span class="font-semibold text-flexline-navy">$62,500</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-flexline-muted">Available</span>
+            <span class="font-semibold text-flexline-green">$87,500</span>
+          </div>
+          <%= link_to "View repayment schedule ›", repayments_path, class: "inline-block pt-2 text-sm font-semibold text-flexline-green hover:underline" %>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-xl border border-sky-100 bg-sky-50/80 p-5 shadow-card">
+      <div class="flex items-start gap-3">
+        <div class="rounded-lg bg-white p-2 text-flexline-navy shadow-sm">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M12 22a2 2 0 002-2H10a2 2 0 002 2zm6-6V11a6 6 0 10-12 0v5l-2 2v1h16v-1l-2-2z"
+            />
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-sm font-semibold text-flexline-navy">Notifications</h2>
+          <p class="mt-2 text-xs leading-relaxed text-flexline-muted">
+            Your recent notifications will appear here.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid gap-4 md:grid-cols-2">
+    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">
+      <h2 class="text-sm font-semibold text-flexline-navy">Bank accounts</h2>
+      <p class="mt-1 text-xs text-flexline-muted">
+        Add and verify accounts for disbursement.
+      </p>
+      <%= link_to "Manage bank accounts ›", bank_accounts_path, class: "mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-flexline-green bg-white px-4 py-2.5 text-sm font-semibold text-flexline-green transition hover:bg-emerald-50" %>
+    </section>
+    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">
+      <h2 class="text-sm font-semibold text-flexline-navy">Repayments</h2>
+      <p class="mt-1 text-xs text-flexline-muted">
+        See instalments, due dates, and statuses (demo data).
+      </p>
+      <%= link_to "Open repayments ›", repayments_path, class: "mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-flexline-green bg-white px-4 py-2.5 text-sm font-semibold text-flexline-green transition hover:bg-emerald-50" %>
+    </section>
+  </div>
+
+  <section class="overflow-hidden rounded-xl border border-flexline-border bg-white shadow-card">
+    <div class="border-b border-flexline-border bg-flexline-table-head px-4 py-3">
+      <h2 class="text-sm font-semibold text-flexline-navy">Recent draws</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-left text-sm">
+        <thead>
+          <tr
+            class="border-b border-flexline-border bg-flexline-table-head text-xs font-semibold uppercase tracking-wide text-flexline-navy"
+          >
+            <th class="px-4 py-3">Draw ID</th>
+            <th class="px-4 py-3">Amount</th>
+            <th class="px-4 py-3">Term</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Last updated</th>
+            <th class="px-4 py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @draws.each do |row| %>
+            <tr class="border-b border-flexline-border last:border-0">
+              <td class="px-4 py-3 font-semibold text-flexline-navy"><%= row[:id] %></td>
+              <td class="px-4 py-3"><%= row[:amount] %></td>
+              <td class="px-4 py-3"><%= row[:term] %></td>
+              <td class="px-4 py-3">
+                <% variant =
+                  case row[:status]
+                  when "Funded"
+                    "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-900"
+                  when "Processing"
+                    "rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-900"
+                  else
+                    "rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-flexline-navy"
+                  end %>
+                <span class="<%= variant %>"><%= row[:status] %></span>
+              </td>
+              <td class="px-4 py-3 text-flexline-muted"><%= row[:updated] %></td>
+              <td class="px-4 py-3 text-right">
+                <%= link_to "View ›", new_draw_request_path, class: "text-sm font-semibold text-flexline-green hover:underline" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
