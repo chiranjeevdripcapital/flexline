@@ -6,6 +6,7 @@ class BankAccount < ApplicationRecord
   belongs_to :organization
   has_many :draws, dependent: :restrict_with_error
   has_many :admin_events, dependent: :nullify
+  has_many :bank_removal_requests, dependent: :destroy
 
   # NOTE: routing_number/account_number require encryption at rest and strict access controls before production launch.
 
@@ -15,6 +16,7 @@ class BankAccount < ApplicationRecord
     micro_deposit_sent
     verified
     failed
+    removed
   ].freeze
 
   VERIFICATION_METHODS = %w[plaid micro_deposit].freeze
@@ -44,6 +46,23 @@ class BankAccount < ApplicationRecord
 
   def verified?
     verification_status == "verified"
+  end
+
+  def removed?
+    verification_status == "removed"
+  end
+
+  # Called when operations approves a borrower-initiated removal (see BankRemovalRequest).
+  # Caller must ensure another verified account remains before invoking.
+  def apply_operator_removal!
+    update!(
+      verification_status: "removed",
+      primary_for_disbursement: false,
+      plaid_item_id: nil,
+      plaid_account_id: nil,
+      failure_reason: nil
+    )
+    organization.ensure_primary_verified_bank_account!
   end
 
   def plaid?

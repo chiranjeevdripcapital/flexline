@@ -1,0 +1,28 @@
+<div class="mx-auto max-w-2xl space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold text-flexline-navy">Request bank account removal</h1>
+    <p class="mt-1 text-sm text-flexline-muted">
+      <%= @bank_account.display_name %> · ···<%= @bank_account.mask_last4 %> — your account stays <strong>verified and usable</strong> until operations approves this request after a risk review.
+      You must keep <strong>at least one other verified</strong> bank account on file.
+    </p>
+  </div>
+
+  <% if @removal_request.errors.any? %>
+    <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+      <%= @removal_request.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <%= form_with model: @removal_request, url: bank_account_removal_request_path(@bank_account), local: true, class: "space-y-5 rounded-xl border border-flexline-border bg-white p-6 shadow-card" do |f| %>
+    <div>
+      <%= f.label :borrower_reason, "Why should this account be removed?", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+      <%= f.text_area :borrower_reason, rows: 6, required: true, minlength: 20, maxlength: 5000, class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2", placeholder: "e.g. Bank relationship closed, switched payroll banks, duplicate entry… (at least 20 characters)" %>
+      <p class="mt-1 text-xs text-flexline-muted">This text is sent to operations with your ticket. Be specific enough for a risk review.</p>
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+      <%= f.submit "Submit removal request", class: "cursor-pointer rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
+      <%= link_to "Cancel", bank_account_path(@bank_account), class: "rounded-lg px-4 py-2.5 text-sm font-semibold text-flexline-navy hover:bg-flexline-sidebar" %>
+    </div>
+  <% end %>
+</div>

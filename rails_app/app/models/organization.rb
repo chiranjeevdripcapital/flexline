@@ -7,6 +7,7 @@ class Organization < ApplicationRecord
   has_many :bank_accounts, dependent: :destroy
   has_many :draws, dependent: :destroy
   has_many :admin_events, dependent: :nullify
+  has_many :bank_removal_requests, dependent: :destroy
 
   validates :name, presence: true
   validates :credit_limit_cents, numericality: { greater_than: 0 }
@@ -39,6 +40,25 @@ class Organization < ApplicationRecord
     return "DRAFT" unless draw.id
 
     format("FL-%05d", draw.id)
+  end
+
+  def verified_bank_accounts
+    bank_accounts.where(verification_status: "verified")
+  end
+
+  def multiple_verified_bank_accounts?
+    verified_bank_accounts.count >= 2
+  end
+
+  def pending_bank_removal_request_for?(account)
+    bank_removal_requests.pending_review.exists?(bank_account_id: account.id)
+  end
+
+  def ensure_primary_verified_bank_account!
+    return if bank_accounts.verified.exists?(primary_for_disbursement: true)
+
+    next_primary = bank_accounts.verified.order(:created_at).first
+    next_primary&.update!(primary_for_disbursement: true)
   end
 
   private

@@ -23,6 +23,9 @@
                 <% end %>
               </span>
               <span class="block text-xs text-flexline-muted">···<%= a.mask_last4 %> · <%= a.account_type.titleize %></span>
+              <% if a.verified? && current_organization.pending_bank_removal_request_for?(a) %>
+                <span class="mt-0.5 block text-xs font-medium text-amber-900">Removal request pending review</span>
+              <% end %>
             <% end %>
             <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= bank_account_status_pill_classes(a) %>">
               <%= bank_account_status_label(a) %>

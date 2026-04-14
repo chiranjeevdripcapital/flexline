@@ -36,7 +36,7 @@ The MVP should give pilots a **single portal** to **authenticate**, **request dr
   - Sign-in / session management (details TBD with security team).
   - **Dashboard** showing at minimum **available credit** (and utilized where data exists).
   - **Draw request**: amount entry with validation against available credit; **3- or 6-month** term selection; **fees and repayment schedule preview** before confirmation; selection of a **fully authorized** disbursement bank account (see §4.3.3); draw status visibility (**Processing / Funded / Declined** or equivalent).
-  - **Bank accounts**: list accounts with clear **lifecycle status**; add account with mandatory fields (account holder name, bank name, account type checking/savings, routing number, account number); **Plaid IAV preferred**, **micro-deposit fallback**; **ACH authorization letter** completed via **Adobe eSign (Bluebird Third-Party API)** after ownership verification and **before** the account is treated as **fully authorized** for disbursement and future ACH debit (see §4.3.3 and §4.9).
+  - **Bank accounts**: list accounts with clear **lifecycle status**; add account with mandatory fields (account holder name, bank name, account type checking/savings, routing number, account number); **Plaid IAV preferred**, **micro-deposit fallback**; **ACH authorization letter** completed via **Adobe eSign (Bluebird Third-Party API)** after ownership verification and **before** the account is treated as **fully authorized** for disbursement and future ACH debit (see §4.3.3 and §4.9); **request removal** of a verified account with **recorded reason** and **operator ticket** when another verified account remains (§4.3.4).
   - **Repayments (non-payment execution)**: show **payment dates** with the **exact ACH debit amount** operations will pull **per date** (one consolidated debit per date across draws—see §4.5), due dates, principal/interest totals for that pull, **status**, and **per-draw breakdown**; per-draw instalment lists remain for context where needed.
 - **Internal Flexline admin / operations surfaces** (implementation may map to existing internal apps—treat as product capabilities, not a tech stack mandate)
   - Flexline **company profile** type with lifecycle and utilization states (see §5).
@@ -94,12 +94,13 @@ Design assumption: a small ops team will **not** scale by opening each company i
 
 **Phase 1 (proposed build on confirmation)**
 
-1. **`/admin` overview (dashboard)** — Counts of draws by status (at least **Processing**), optional counts for bank accounts in **awaiting_plaid**, **micro_deposit_sent**, **failed**; each count links to a **pre-filtered** list view.
+1. **`/admin` overview (dashboard)** — Counts of draws by status (at least **Processing**), optional counts for bank accounts in **awaiting_plaid**, **micro_deposit_sent**, **failed**; each count links to a **pre-filtered** list view. **Pending bank removal requests** surfaced when the queue is non-empty.
 2. **`/admin/draws` index upgrades** — **Search** (organization name, draw id); **filters** (status, created date range); **sort** (newest first, oldest first, amount); columns including **organization**, **amount**, **term**, **age in queue**, **disbursement account mask**, **created_at**; **CSV export** of the current filtered result set.
 3. **`/admin/draws/:id` upgrades** — **Internal operator notes** (persisted on the draw); decline path uses **structured internal reason** (enum or taxonomy) plus existing borrower-facing messaging rules; show **company snapshot** (limit, available, outstanding, portal status, lifecycle).
 4. **`/admin/organizations` index + show** — Paginated list with **search** by name; **show** page lists recent draws and bank account summary (status, method, mask)—navigation hub for “everything about this customer.”
 5. **`/admin/bank_accounts` index** — Cross-organization list with **filters** (verification status, verification method, org search); columns for org, mask, method, statuses, timestamps; link to borrower-facing bank detail or admin show as implemented.
-6. **`AdminEvent` (or equivalent) audit model** — Append-only rows for **draw approved**, **draw declined**, and other admin actions with **timestamp**, **action type**, **subject** (draw/org/bank), **actor identifier** (e.g. HTTP Basic username in MVP), optional JSON **metadata**; **show recent events** on draw/org admin pages.
+6. **`/admin/bank_removal_requests`** — Queue of borrower-initiated **verified account removal** tickets; **approve** / **reject** with operator notes; **AdminEvent** on submit (portal actor), approve, and reject.
+7. **`AdminEvent` (or equivalent) audit model** — Append-only rows for **draw approved**, **draw declined**, **bank removal** lifecycle, and other admin actions with **timestamp**, **action type**, **subject** (draw/org/bank), **actor identifier** (e.g. HTTP Basic username in MVP), optional JSON **metadata**; **show recent events** on draw/org admin pages.
 
 **Explicitly not in Phase 1** (remain PRD / later phases unless re-scoped on confirmation)
 
@@ -132,6 +133,7 @@ Design assumption: a small ops team will **not** scale by opening each company i
   - **AC:** **Ownership verification** (Plaid success **or** micro-deposit success) is **required** before the **ACH authorization letter** can be sent for signature (see §4.3.3).
   - **AC:** Only bank accounts that are **fully authorized** (ownership verified **and** ACH letter **signed** per §4.9) appear as selectable **disbursement** accounts on draw confirmation.
   - **AC:** If ownership is verified but ACH is unsigned, the portal shows a **clear next step** (open signing URL, resend, or contact support) without implying the account is ready for draws.
+  - **AC:** A borrower may **request removal** of a **verified** bank account **only if at least one other verified account** remains on the facility; the portal collects a **free-text reason** (minimum length per UX), creates a **ticket** (`BankRemovalRequest` in **pending review**), and keeps the account **verified and selectable** until operations **approves** (after risk review) or **rejects** the request (see §4.3.4).
 
 #### 4.3.1 Bank verification — borrower edge cases (UX + rules)
 
@@ -156,6 +158,17 @@ Importer **company** and **facility limit** remain the source of truth for **app
 For bank accounts, admin/ops needs at minimum: **list** of accounts per organization with **ownership verification status**, **verification method** (Plaid vs micro-deposit), **ACH / e-sign status** and **agreement id** (or envelope id), **mask**, **primary disbursement flag**, **timestamps** (created, ownership verified, ACH sent, ACH signed, failed), **failure reason** (if any), **Plaid item/account identifiers** for support, and **signed PDF** storage reference when available. **Draw** views must show **which fully authorized bank account** was selected for disbursement. Operators run **transaction risk policy** before funding; **no payout** to an account unless portal (and admin) show **fully authorized** (ownership + signed ACH letter). When funding completes, **draw status** updates in admin and portal; **email** notifications should fire on verification success/failure, **ACH sent/signed/declined**, draw processing/funded/declined, and micro-deposit lifecycle as agreed with comms.
 
 Future automation: **risk policy on draw submit** and **ACH/wire initiation** after pass—admin fields should support audit of **automation vs manual** decisions without redesigning the borrower flow.
+
+#### 4.3.4 Verified bank account — borrower removal request (operator ticket)
+
+**Intent:** Close a verified account the borrower no longer wants on file, **without** allowing the facility to end up with **zero** verified disbursement accounts.
+
+**Rules**
+
+- **Eligibility:** Request is offered only when the organization has **≥ 2** accounts in **verified** status; the account stays usable until the ticket is resolved.
+- **Borrower:** Submits **reason** (stored verbatim for ops/risk); sees **pending** state on the account list/detail until resolved.
+- **Operations / risk:** **`/admin/bank_removal_requests`** lists tickets; **approve** sets the bank account to **removed** (no longer eligible for new draws; historical draw references unchanged) after satisfying “another verified account still exists” again at approval time; **reject** leaves the account verified. **AdminEvent** records request, approval, and rejection for audit.
+- **Primary flag:** If the removed account was primary, another verified account becomes primary automatically.
 
 ### 4.4 Draw request
 
@@ -231,7 +244,8 @@ Fields are indicative; schemas belong to engineering.
 | **Organization / Flexline facility** | Borrower entity for limit and draws | Identifiers, facility limit, utilized, available, lifecycle status (Pending/Underwriting/Approved/Accepted/Rejected per internal draft), utilization status (Active/Suspended), repayment anchor policy once defined (§9).   |
 | **Portal user**                      | Login identity                      | Email, auth credentials reference, linkage to organization and role.                                                                                                                                                         |
 | **Contact**                          | Person record from importer/KYC     | KYC payload reference; portal enabled flag; invitation timestamps.                                                                                                                                                           |
-| **Bank account**                     | Disbursement (+ future repayment)   | Holder name, bank name, type, routing, account number (stored securely), mask for display, **ownership verification** method (Plaid / micro-deposit) and status, **ACH authorization** status, **Adobe/agreement id**, **signed PDF** reference, timestamps for verification and e-sign milestones. |
+| **Bank account**                     | Disbursement (+ future repayment)   | Holder name, bank name, type, routing, account number (stored securely), mask for display, **ownership verification** method (Plaid / micro-deposit) and status (includes **removed** after approved removal request), **ACH authorization** status, **Adobe/agreement id**, **signed PDF** reference, timestamps for verification and e-sign milestones. |
+| **Bank removal request**             | Ticket for ops / risk               | Organization, bank account, **borrower_reason**, **status** (pending_review / approved / rejected), operator notes, reviewer id, reviewed at; **AdminEvent** correlation (§4.3.4).                                                                                                            |
 | **Draw**                             | Single draw request / obligation    | Amount, term (3/6 mo), fee quote snapshot, schedule snapshot, disbursement bank account id, status, timestamps, decline reason (if applicable); **internal operator notes** (§3.5); optional **internal decline code** (§3.4).                                                                              |
 | **AdminEvent** (or equivalent)       | Ops / audit                         | Action type, subject references, actor identifier, timestamp, metadata JSON (§3.5 Phase 1).                                                                                                                                 |
 | **Instalment**                       | Scheduled repayment line (per draw) | Due date (`due_on`), line amount (component of ACH pull), principal/interest split, status, `draw_id`, `sequence`. **Same `due_on` across draws** rolls up to **one ACH debit** on the borrower schedule (§4.5).              |
@@ -250,6 +264,8 @@ Fields are indicative; schemas belong to engineering.
 | View own draws/schedule     | Yes                           | Yes (all pilots) | Yes (scoped) | TBD             |
 | Create draw request         | If Active + Approved/Accepted | No               | No           | No              |
 | Add/verify bank account     | Yes                           | TBD assist       | No           | No              |
+| Request verified bank removal | Yes (if ≥2 verified)      | No               | No           | No              |
+| Approve/reject bank removal | No                            | Yes              | Yes (policy) | No              |
 | Move Pending → Underwriting | No                            | Yes              | Yes          | No              |
 | Final approve/reject        | No                            | TBD              | Yes          | No              |
 | Enable portal login         | No                            | Yes              | TBD          | No              |
@@ -334,5 +350,6 @@ flowchart LR
 | 2026-04-16 | Product | §3.4 operator-at-scale requirements; §3.5 **pending-confirmation** engineering deliverables for Rails admin; §5 AdminEvent + draw notes; §8 ops metrics; Operations persona pointer. |
 | 2026-04-17 | Product | §4.5 **one ACH per payment date**; explicit **ACH debit amount** on schedule + per-draw breakdown; §4.5.1 consolidated status rules; §5 Instalment note; §7 repayment workflow; §9 Q1 split decided vs TBD. |
 | 2026-04-17 | Product | §3.5 Phase 1 **confirmed**; Rails admin: `/admin` dashboard, draws filters/CSV/notes/decline codes, org + bank indexes, `AdminEvent` audit. |
+| 2026-04-17 | Product | §4.3.4 **verified bank removal requests** (borrower reason + ops ticket); `removed` status; `/admin/bank_removal_requests`; §5–§6 updates. |
 
 

@@ -5,6 +5,9 @@ class AdminEvent < ApplicationRecord
     draw_approved
     draw_declined
     draw_operator_notes_updated
+    bank_removal_requested
+    bank_removal_approved
+    bank_removal_rejected
   ].freeze
 
   belongs_to :organization, optional: true

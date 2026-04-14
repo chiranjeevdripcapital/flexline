@@ -11,7 +11,10 @@ Rails.application.routes.draw do
 
   resource :portal_suspension, only: %i[show]
 
+  resources :bank_removal_requests, only: %i[index]
+
   resources :bank_accounts, only: %i[index new create show] do
+    resource :removal_request, only: %i[new create], controller: "bank_removal_requests"
     member do
       post :plaid_complete
       post :plaid_link_token
@@ -28,6 +31,12 @@ Rails.application.routes.draw do
     root "dashboard#index"
     resources :organizations, only: %i[index show]
     resources :bank_accounts, only: %i[index]
+    resources :bank_removal_requests, only: %i[index show] do
+      member do
+        post :approve
+        post :reject
+      end
+    end
     resources :draws, only: %i[index show] do
       member do
         post :approve

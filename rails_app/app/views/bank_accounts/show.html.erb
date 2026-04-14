@@ -20,7 +20,18 @@
     <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-950"><%= flash[:alert] %></div>
   <% end %>
 
-  <% if a.verified? %>
+  <% if a.removed? %>
+    <section class="rounded-xl border border-slate-300 bg-slate-50 p-5 shadow-card">
+      <h2 class="text-sm font-semibold text-slate-900">Removed</h2>
+      <p class="mt-2 text-sm text-slate-700">
+        Operations approved removal of this account from active use. It no longer appears for new draws or repayments setup. Past funded activity may still reference this account for records.
+      </p>
+      <div class="mt-5 flex flex-wrap gap-3">
+        <%= link_to "Back to all accounts", bank_accounts_path, class: "inline-flex rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-100" %>
+      </div>
+    </section>
+
+  <% elsif a.verified? %>
     <section class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-card">
       <h2 class="text-sm font-semibold text-emerald-950">Verified</h2>
       <p class="mt-2 text-sm text-emerald-950/90">
@@ -42,6 +53,26 @@
           </div>
         <% end %>
       </dl>
+
+      <div class="mt-4 rounded-lg border border-emerald-800/20 bg-white/80 p-4">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-emerald-900/80">Remove this account</h3>
+        <% if current_organization.pending_bank_removal_request_for?(a) %>
+          <p class="mt-2 text-sm text-emerald-950/90">
+            A removal request is <strong>awaiting operations review</strong>. This account stays verified and usable until the request is approved or rejected.
+          </p>
+          <%= link_to "View your requests", bank_removal_requests_path, class: "mt-2 inline-flex text-sm font-semibold text-flexline-green hover:underline" %>
+        <% elsif current_organization.multiple_verified_bank_accounts? %>
+          <p class="mt-2 text-sm text-emerald-950/90">
+            Request removal if this account should no longer be used. You must keep <strong>at least one other verified</strong> bank account—we record your reason and open a ticket for risk review.
+          </p>
+          <%= link_to "Request removal…", new_bank_account_removal_request_path(a), class: "mt-2 inline-flex rounded-lg border border-emerald-800/30 bg-white px-4 py-2 text-sm font-semibold text-emerald-950 hover:bg-emerald-50" %>
+        <% else %>
+          <p class="mt-2 text-sm text-emerald-950/90">
+            To remove this account, first <strong>add and verify another</strong> bank account so your facility always has at least one verified account on file.
+          </p>
+        <% end %>
+      </div>
+
       <div class="mt-5 flex flex-wrap gap-3">
         <%= link_to "Request a draw", new_draw_request_path, class: "inline-flex rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
         <%= link_to "Back to all accounts", bank_accounts_path, class: "inline-flex rounded-lg border border-emerald-800/20 px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-100/80" %>

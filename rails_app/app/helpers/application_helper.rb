@@ -11,6 +11,8 @@ module ApplicationHelper
     case account.verification_status
     when "verified"
       "border-emerald-200 bg-emerald-50 text-emerald-900"
+    when "removed"
+      "border-slate-300 bg-slate-100 text-slate-800"
     when "failed"
       "border-rose-200 bg-rose-50 text-rose-900"
     when "micro_deposit_sent", "awaiting_plaid"
@@ -23,6 +25,7 @@ module ApplicationHelper
   def bank_account_status_label(account)
     case account.verification_status
     when "verified" then "Verified"
+    when "removed" then "Removed"
     when "failed" then "Failed"
     when "micro_deposit_sent" then "Micro-deposits sent"
     when "awaiting_plaid" then "Awaiting Plaid"

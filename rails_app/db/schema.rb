@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_15_120008) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_15_120009) do
   create_table "admin_events", force: :cascade do |t|
     t.string "action", null: false
     t.string "actor_identifier", null: false
@@ -50,6 +50,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_15_120008) do
     t.datetime "updated_at", null: false
     t.index ["organization_id", "account_fingerprint"], name: "index_bank_accounts_on_org_and_fingerprint", unique: true
     t.index ["organization_id"], name: "index_bank_accounts_on_organization_id"
+  end
+
+  create_table "bank_removal_requests", force: :cascade do |t|
+    t.integer "organization_id", null: false
+    t.integer "bank_account_id", null: false
+    t.text "borrower_reason", null: false
+    t.string "status", default: "pending_review", null: false
+    t.text "operator_notes"
+    t.string "reviewer_identifier"
+    t.datetime "reviewed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bank_account_id", "status"], name: "index_bank_removal_requests_on_bank_account_id_and_status"
+    t.index ["bank_account_id"], name: "index_bank_removal_requests_on_bank_account_id"
+    t.index ["organization_id"], name: "index_bank_removal_requests_on_organization_id"
+    t.index ["status"], name: "index_bank_removal_requests_on_status"
   end
 
   create_table "draws", force: :cascade do |t|
@@ -107,6 +123,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_15_120008) do
   add_foreign_key "admin_events", "draws"
   add_foreign_key "admin_events", "organizations"
   add_foreign_key "bank_accounts", "organizations"
+  add_foreign_key "bank_removal_requests", "bank_accounts"
+  add_foreign_key "bank_removal_requests", "organizations"
   add_foreign_key "draws", "bank_accounts"
   add_foreign_key "draws", "organizations"
   add_foreign_key "installments", "draws"
