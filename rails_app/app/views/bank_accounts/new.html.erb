@@ -35,10 +35,10 @@
 
     <fieldset>
       <legend class="text-xs font-semibold uppercase tracking-wide text-flexline-muted">Account type</legend>
-      <div class="mt-2 flex flex-wrap gap-3">
+      <div class="mt-2 flex flex-wrap gap-3" role="presentation">
         <% BankAccount::ACCOUNT_TYPES.each do |type| %>
-          <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold <%= f.object.account_type == type ? "border-flexline-navy bg-flexline-navy text-white" : "border-flexline-border text-flexline-navy hover:bg-flexline-sidebar" %>">
-            <%= f.radio_button :account_type, type, class: "sr-only" %>
+          <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-flexline-border px-4 py-2 text-sm font-semibold text-flexline-navy shadow-sm hover:bg-flexline-sidebar has-[:checked]:border-flexline-navy has-[:checked]:bg-flexline-navy has-[:checked]:text-white has-[:checked]:shadow-none">
+            <%= f.radio_button :account_type, type, class: "h-4 w-4 shrink-0 accent-flexline-green" %>
             <%= type.titleize %>
           </label>
         <% end %>
