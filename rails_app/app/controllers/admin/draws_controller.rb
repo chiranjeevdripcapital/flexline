@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "csv"
-
 module Admin
   class DrawsController < Admin::ApplicationController
     before_action :set_draw, only: %i[show update_notes approve decline]
@@ -136,16 +134,17 @@ module Admin
     end
 
     def draws_to_csv(rows)
-      CSV.generate(headers: true) do |csv|
-        csv << %w[id public_code organization_name amount_cents term_months status created_at funded_at bank_mask age_in_queue_description]
-        rows.each do |d|
-          age =
-            if d.status == "processing"
-              "#{((Time.current - d.created_at) / 3600.0).round(1)}h since submit"
-            else
-              "—"
-            end
-          csv << [
+      header = %w[id public_code organization_name amount_cents term_months status created_at funded_at bank_mask age_in_queue_description]
+      lines = [ format_csv_line(header) ]
+      rows.each do |d|
+        age =
+          if d.status == "processing"
+            "#{((Time.current - d.created_at) / 3600.0).round(1)}h since submit"
+          else
+            "—"
+          end
+        lines << format_csv_line(
+          [
             d.id,
             d.public_code,
             d.organization.name,
@@ -157,8 +156,20 @@ module Admin
             d.bank_account.mask_last4,
             age
           ]
-        end
+        )
       end
+      lines.join("\n") + "\n"
+    end
+
+    def format_csv_line(values)
+      values.map { |v| escape_csv_field(v) }.join(",")
+    end
+
+    def escape_csv_field(value)
+      s = value.nil? ? "" : value.to_s
+      return "\"#{s.gsub('"', '""')}\"" if /[",\r\n]/.match?(s)
+
+      s
     end
   end
 end
