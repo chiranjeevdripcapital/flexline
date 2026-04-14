@@ -27,6 +27,12 @@
           </li>
         <% end %>
       </ul>
+      <% if @draw.status == "funded" %>
+        <p class="mt-3 text-xs leading-relaxed text-flexline-muted">
+          For the <strong class="font-semibold text-flexline-navy">amount debited by ACH on each date</strong> across all your draws, open
+          <%= link_to "Repayments", repayments_path, class: "font-semibold text-flexline-green hover:underline" %>—amounts on the same date are combined into one pull.
+        </p>
+      <% end %>
     <% else %>
       <p class="mt-2 text-sm text-flexline-muted">No instalments found.</p>
     <% end %>

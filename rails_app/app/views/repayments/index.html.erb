@@ -2,45 +2,52 @@
   <div>
     <h1 class="text-2xl font-bold text-flexline-navy">Repayments</h1>
     <p class="mt-1 text-sm text-flexline-muted">
-      Each funded draw adds instalments with due dates. Status updates when payments are recorded against your facility.
+      You make <strong class="font-semibold text-flexline-navy">one ACH debit per payment date</strong> on the facility, even when more than one funded draw has a line due that day. The table shows the
+      <strong class="font-semibold text-flexline-navy">exact amount we will pull</strong> on each date, with a breakdown by draw.
     </p>
   </div>
 
   <section class="overflow-hidden rounded-xl border border-flexline-border bg-white shadow-card">
     <div class="border-b border-flexline-border bg-flexline-table-head px-4 py-3">
-      <h2 class="text-sm font-semibold text-flexline-navy">Schedule</h2>
+      <h2 class="text-sm font-semibold text-flexline-navy">ACH debit schedule</h2>
+      <p class="mt-1 text-xs text-flexline-muted">Totals combine all instalments with the same due date. Status updates when payments are recorded.</p>
     </div>
-    <% if @installments.any? %>
+    <% if @payment_date_groups.any? %>
       <div class="overflow-x-auto">
         <table class="min-w-full text-left text-sm">
           <thead>
             <tr
               class="border-b border-flexline-border bg-flexline-table-head text-xs font-semibold uppercase tracking-wide text-flexline-navy"
             >
-              <th class="px-4 py-3">Due date</th>
-              <th class="px-4 py-3">Draw</th>
-              <th class="px-4 py-3">Amount</th>
+              <th class="px-4 py-3">Payment date</th>
+              <th class="px-4 py-3">ACH debit (this pull)</th>
               <th class="px-4 py-3">Principal</th>
               <th class="px-4 py-3">Interest</th>
               <th class="px-4 py-3">Status</th>
-              <th class="px-4 py-3 text-right">Action</th>
+              <th class="px-4 py-3">This payment includes</th>
             </tr>
           </thead>
           <tbody>
-            <% @installments.each do |row| %>
+            <% @payment_date_groups.each do |group| %>
               <% cls =
-                row.status == "paid" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-sky-200 bg-sky-50 text-flexline-navy" %>
-              <tr class="border-b border-flexline-border last:border-0">
-                <td class="px-4 py-3 font-medium text-flexline-navy"><%= l(row.due_on) %></td>
-                <td class="px-4 py-3 text-flexline-muted"><%= row.draw.public_code %></td>
-                <td class="px-4 py-3"><%= format_money(row.amount_cents) %></td>
-                <td class="px-4 py-3 text-flexline-muted"><%= format_money(row.principal_cents) %></td>
-                <td class="px-4 py-3 text-flexline-muted"><%= format_money(row.interest_cents) %></td>
+                group.status == "paid" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-sky-200 bg-sky-50 text-flexline-navy" %>
+              <tr class="border-b border-flexline-border align-top last:border-0">
+                <td class="px-4 py-3 font-medium text-flexline-navy"><%= l(group.due_on) %></td>
+                <td class="px-4 py-3 font-semibold text-flexline-navy"><%= format_money(group.ach_debit_cents) %></td>
+                <td class="px-4 py-3 text-flexline-muted"><%= format_money(group.principal_cents) %></td>
+                <td class="px-4 py-3 text-flexline-muted"><%= format_money(group.interest_cents) %></td>
                 <td class="px-4 py-3">
-                  <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= cls %>"><%= row.status.titleize %></span>
+                  <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= cls %>"><%= group.status.titleize %></span>
                 </td>
-                <td class="px-4 py-3 text-right">
-                  <%= link_to "View draw ›", draw_request_path(row.draw), class: "text-sm font-semibold text-flexline-green hover:underline" %>
+                <td class="px-4 py-3 text-flexline-muted">
+                  <ul class="list-inside list-disc space-y-1 text-xs">
+                    <% group.installments.each do |row| %>
+                      <li>
+                        <%= row.draw.public_code %> — <%= format_money(row.amount_cents) %>
+                        <%= link_to "View draw ›", draw_request_path(row.draw), class: "font-semibold text-flexline-green hover:underline" %>
+                      </li>
+                    <% end %>
+                  </ul>
                 </td>
               </tr>
             <% end %>
@@ -48,7 +55,7 @@
         </table>
       </div>
     <% else %>
-      <div class="px-4 py-10 text-center text-sm text-flexline-muted">No instalments yet.</div>
+      <div class="px-4 py-10 text-center text-sm text-flexline-muted">No payment dates yet. After a draw is funded, instalments appear here grouped by debit date.</div>
     <% end %>
   </section>
 </div>

@@ -1,7 +1,7 @@
 # Flexline — MVP Product Requirements Document (PRD)
 
 **Status:** Draft for pilot MVP  
-**Last updated:** 2026-04-16  
+**Last updated:** 2026-04-17  
 **UI note:** No bespoke visual design in MVP; use platform defaults unless layout is specified below because it affects requirements.
 
 ---
@@ -37,7 +37,7 @@ The MVP should give pilots a **single portal** to **authenticate**, **request dr
   - **Dashboard** showing at minimum **available credit** (and utilized where data exists).
   - **Draw request**: amount entry with validation against available credit; **3- or 6-month** term selection; **fees and repayment schedule preview** before confirmation; selection of a **fully authorized** disbursement bank account (see §4.3.3); draw status visibility (**Processing / Funded / Declined** or equivalent).
   - **Bank accounts**: list accounts with clear **lifecycle status**; add account with mandatory fields (account holder name, bank name, account type checking/savings, routing number, account number); **Plaid IAV preferred**, **micro-deposit fallback**; **ACH authorization letter** completed via **Adobe eSign (Bluebird Third-Party API)** after ownership verification and **before** the account is treated as **fully authorized** for disbursement and future ACH debit (see §4.3.3 and §4.9).
-  - **Repayments (non-payment execution)**: show **instalment schedule**, amounts, due dates, and **payment status** as recorded by operations; support borrower understanding of terms; store and display **instalment breakdown at draw level** where applicable.
+  - **Repayments (non-payment execution)**: show **payment dates** with the **exact ACH debit amount** operations will pull **per date** (one consolidated debit per date across draws—see §4.5), due dates, principal/interest totals for that pull, **status**, and **per-draw breakdown**; per-draw instalment lists remain for context where needed.
 - **Internal Flexline admin / operations surfaces** (implementation may map to existing internal apps—treat as product capabilities, not a tech stack mandate)
   - Flexline **company profile** type with lifecycle and utilization states (see §5).
   - Workflow: **Pending → Underwriting** (operator task), **Underwriting → Approved/Rejected** via **final decision** capture; paths involving **Accepted** as described in internal drafts.
@@ -169,9 +169,15 @@ Future automation: **risk policy on draw submit** and **ACH/wire initiation** af
 ### 4.5 Repayments (visibility and terms; ops execution external)
 
 - **As a** borrower **I want to** see my repayment schedule and what is due **so that** I can plan cash flow without asking operations for spreadsheets.
-  - **AC:** Show instalments with **due date**, **amount**, **allocation** (principal/interest/fees at the level finance defines), and **status** (e.g. scheduled / paid / overdue) as determined by operations marking and business rules.
-  - **AC:** Show **per-draw instalment breakdown** where multiple draws contribute to a monthly obligation.
-  - **AC:** When an instalment is marked paid, **available credit** updates according to agreed limit logic (draft: facility limit frees by paid principal component—confirm in §9).
+  - **AC:** The customer makes **one ACH debit per payment date** on the facility, **even when multiple funded draws** each have an instalment line on **that same calendar date**. Operations pulls the **combined total** once per date (manual ACH in MVP; same presentation when automation runs).
+  - **AC:** On the primary **Repayments / ACH schedule** view, for **each payment date** the portal shows the **exact ACH debit amount** (label clearly as the amount to be pulled, e.g. “ACH debit (this pull)”), plus **principal and interest** totals for that pull, **status** for that date (see §4.5.1), and a **breakdown by draw** (each draw’s share of that date’s pull) so the customer can reconcile to per-draw detail.
+  - **AC:** **Per-draw** views may still list that draw’s instalment lines for context; they must **point to** the Repayments view for the **facility-wide ACH total per date** when more than one draw exists or when consolidation applies.
+  - **AC:** When underlying instalment lines for a date are marked paid, **available credit** updates according to agreed limit logic (draft: facility limit frees by paid principal component—confirm in §9).
+
+#### 4.5.1 Consolidated payment date status
+
+- **Rule:** One **scheduled row per calendar `due_on`** on the facility schedule. **Status = Paid** only when **every** instalment line grouped under that date is **paid**; if any line remains scheduled, the consolidated row stays **Scheduled** (partial payments policy remains §9 until defined).
+- **Data:** Underlying **Instalment** rows remain per draw in the system of record; the borrower-facing schedule is a **presentation aggregate** by `due_on` (sum of `amount_cents` = ACH debit for that date).
 
 ### 4.6 Flexline admin — company lifecycle
 
@@ -228,7 +234,7 @@ Fields are indicative; schemas belong to engineering.
 | **Bank account**                     | Disbursement (+ future repayment)   | Holder name, bank name, type, routing, account number (stored securely), mask for display, **ownership verification** method (Plaid / micro-deposit) and status, **ACH authorization** status, **Adobe/agreement id**, **signed PDF** reference, timestamps for verification and e-sign milestones. |
 | **Draw**                             | Single draw request / obligation    | Amount, term (3/6 mo), fee quote snapshot, schedule snapshot, disbursement bank account id, status, timestamps, decline reason (if applicable); **internal operator notes** (§3.5); optional **internal decline code** (§3.4).                                                                              |
 | **AdminEvent** (or equivalent)       | Ops / audit                         | Action type, subject references, actor identifier, timestamp, metadata JSON (§3.5 Phase 1).                                                                                                                                 |
-| **Instalment**                       | Scheduled repayment line            | Due date, amounts (principal/interest/fees), state, link to draw(s), aggregation key for monthly total.                                                                                                                      |
+| **Instalment**                       | Scheduled repayment line (per draw) | Due date (`due_on`), line amount (component of ACH pull), principal/interest split, status, `draw_id`, `sequence`. **Same `due_on` across draws** rolls up to **one ACH debit** on the borrower schedule (§4.5).              |
 | **Repayment event / marking**        | Ops reconciliation                  | Amount, date, method (manual ACH, wire, etc.), allocations to instalments, operator id, notes.                                                                                                                               |
 | **Admin decision**                   | Underwriting outcome                | Decision, limits, actor, timestamp, optional documents.                                                                                                                                                                      |
 | **Imported tabs (references)**       | Risk/ops context                    | Insurance, A-form Owners, Contacts, Documents, Sources (Plaid/Equifax/D&B/AML/etc. as references in draft—not MVP to build scoring).                                                                                         |
@@ -274,7 +280,7 @@ flowchart LR
 1. **Draw — happy path:** Borrower submits draw → status **Processing** → operations validates limit, bank, and internal checks → funding executed per bank process → status **Funded** → schedule and fees visible on draw detail.
 2. **Draw — decline:** Operations or policy declines → status **Declined** with internal reason code; borrower sees safe messaging.
 3. **Bank account authorization:** Borrower completes **Plaid or micro-deposit** (ownership verified) → portal initiates **ACH authorization letter** via **Adobe eSign (Bluebird API)** → borrower signs → account **fully authorized** → eligible for draw disbursement selection.
-4. **Repayment:** Operations runs **manual ACH** outside portal orchestration → operations records **paid** against instalment(s) → portal reflects paid and **credit availability** updates per agreed rules.
+4. **Repayment:** Operations runs **manual ACH** outside portal orchestration—**one pull per payment date** equal to the **sum** of all instalment lines due that date across draws → operations records **paid** against the underlying instalment line(s) → portal shows consolidated **ACH debit** per date and **credit availability** updates per agreed rules.
 5. **Exceptions:** NSF, partial payments, holidays shifting ACH—**not defined in MVP PRD**; handled per ops SOP until codified (see §9).
 
 ---
@@ -299,7 +305,7 @@ flowchart LR
 
 ## 9. Open questions
 
-1. **Consolidated repayment calendar policy:** Finalize single set of rules for **facility anchor (1st vs 15th)**, **first instalment offset** after draw, **monthly aggregation** across draws, **grace period** before overdue interest, and **overdue interest** mechanics (drafts cite **3-day** grace in one place and **7-day** in others; pilot SOP uses **15th** anchor locked at onboarding).
+1. **Repayment calendar (remaining detail):** **Decided:** one **ACH debit per payment date** on the facility; portal shows the **exact pull amount** per date with per-draw breakdown (§4.5). **Still finalize** with finance: **facility anchor (1st vs 15th)** so multiple draws’ schedules align to shared dates, **first instalment offset** after draw, **grace period** before overdue interest, and **overdue interest** mechanics (drafts cite **3-day** grace in one place and **7-day** in others; pilot SOP uses **15th** anchor locked at onboarding).
 2. **ACH letter content and signers:** Final **legal PDF**, required **signatories** (single borrower admin vs dual), **regeneration** when bank details change after signing, and **Adobe text-tag** placement—owned by legal with engineering for upload template.
 3. **Funding rail vs status:** Should **Funded** reflect actual bank settlement, operations confirmation, or both?
 4. **Partial payments and allocation order:** Not decided in drafts.
@@ -326,5 +332,6 @@ flowchart LR
 | 2026-04-14 | Product | Added §4.3.1 borrower bank-verification edge cases and §4.3.2 admin/ops bank + notification requirements. |
 | 2026-04-15 | Product | ACH authorization letter + **Adobe eSign (Bluebird TPA)** after Plaid/micro-deposit; §4.3.3, §4.9, data object and workflow updates; placeholder template under `docs/templates/`. |
 | 2026-04-16 | Product | §3.4 operator-at-scale requirements; §3.5 **pending-confirmation** engineering deliverables for Rails admin; §5 AdminEvent + draw notes; §8 ops metrics; Operations persona pointer. |
+| 2026-04-17 | Product | §4.5 **one ACH per payment date**; explicit **ACH debit amount** on schedule + per-draw breakdown; §4.5.1 consolidated status rules; §5 Instalment note; §7 repayment workflow; §9 Q1 split decided vs TBD. |
 
 
