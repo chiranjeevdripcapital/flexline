@@ -2,70 +2,55 @@
   <div>
     <h1 class="text-2xl font-bold text-flexline-navy">Request draw</h1>
     <p class="mt-1 text-sm text-flexline-muted">
-      Enter an amount within your available limit, pick a term, and review the illustrative
-      schedule before confirming.
+      Enter whole dollars (no commas required). This MVP immediately funds the draw and creates a simple instalment schedule.
     </p>
   </div>
 
-  <%= form_with url: draw_requests_path, method: :post, local: true, class: "space-y-5 rounded-xl border border-flexline-border bg-white p-6 shadow-card" do %>
+  <% if @verified_accounts.none? %>
+    <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+      You need at least one <strong>verified</strong> bank account to request a draw.
+      <%= link_to "Add and verify a bank account", bank_accounts_path, class: "font-semibold text-flexline-green hover:underline" %>.
+    </div>
+  <% end %>
+
+  <%= form_with model: @draw, url: draw_requests_path, class: "space-y-5 rounded-xl border border-flexline-border bg-white p-6 shadow-card" do |f| %>
+    <% if @draw.errors.any? %>
+      <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+        <%= @draw.errors.full_messages.to_sentence %>
+      </div>
+    <% end %>
+
     <div>
-      <label for="amount" class="block text-xs font-semibold uppercase tracking-wide text-flexline-muted">Draw amount (USD)</label>
-      <input
-        id="amount"
-        name="amount"
-        type="text"
-        value="25000"
-        class="mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm font-medium text-flexline-navy outline-none ring-flexline-green focus:ring-2"
-      />
+      <%= label_tag "draw_amount_dollars", "Draw amount (USD)", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+      <%= text_field_tag "draw[amount_dollars]", @amount_dollars_raw, id: "draw_amount_dollars", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm font-medium text-flexline-navy outline-none ring-flexline-green focus:ring-2" %>
       <p class="mt-1 text-xs text-flexline-muted">
-        Available for draw: <span class="font-semibold">$87,500</span> (demo)
+        Available: <span class="font-semibold"><%= format_money(current_organization.available_cents) %></span>
       </p>
     </div>
 
     <fieldset>
       <legend class="text-xs font-semibold uppercase tracking-wide text-flexline-muted">Term</legend>
       <div class="mt-2 flex gap-3">
-        <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-flexline-navy bg-flexline-navy px-4 py-2 text-sm font-semibold text-white">
-          <input type="radio" name="term" value="6" checked class="sr-only" />
-          6 months
-        </label>
-        <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-flexline-border px-4 py-2 text-sm font-semibold text-flexline-navy hover:bg-flexline-sidebar">
-          <input type="radio" name="term" value="3" class="sr-only" />
-          3 months
-        </label>
+        <% [ 6, 3 ].each do |months| %>
+          <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold <%= f.object.term_months.to_i == months ? "border-flexline-navy bg-flexline-navy text-white" : "border-flexline-border text-flexline-navy hover:bg-flexline-sidebar" %>">
+            <%= f.radio_button :term_months, months, class: "sr-only" %>
+            <%= months %> months
+          </label>
+        <% end %>
       </div>
     </fieldset>
 
     <div>
-      <label for="bank" class="block text-xs font-semibold uppercase tracking-wide text-flexline-muted">Disbursement account</label>
-      <select
-        id="bank"
-        name="bank"
-        class="mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm text-flexline-navy outline-none ring-flexline-green focus:ring-2"
-      >
-        <option>Operating · JPM · ···4421 (verified)</option>
-      </select>
+      <%= f.label :bank_account_id, "Disbursement account", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+      <%= f.collection_select :bank_account_id, @verified_accounts, :id, :label_for_draw_select, { include_blank: "Select a verified account" }, class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm text-flexline-navy outline-none ring-flexline-green focus:ring-2", disabled: @verified_accounts.none? %>
     </div>
 
-    <section class="rounded-lg border border-flexline-border bg-flexline-table-head/50 p-4 text-sm">
-      <h2 class="font-semibold text-flexline-navy">Illustrative preview</h2>
-      <p class="mt-2 text-xs text-flexline-muted">
-        Fees and instalment breakdown will mirror finance configuration (see PRD open questions).
-      </p>
-      <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <dt class="text-flexline-muted">Est. fee (demo)</dt>
-        <dd class="text-right font-semibold text-flexline-navy">$312.50</dd>
-        <dt class="text-flexline-muted">First due</dt>
-        <dd class="text-right font-semibold text-flexline-navy">May 15, 2026</dd>
-      </dl>
+    <section class="rounded-lg border border-flexline-border bg-flexline-table-head/50 p-4 text-sm text-flexline-muted">
+      <strong class="text-flexline-navy">Note:</strong> fees/interest are not finance-final yet; instalments are an equal-principal stub for engineering demos.
     </section>
 
     <div class="flex flex-wrap gap-3">
-      <input
-        type="submit"
-        value="Submit draw request"
-        class="cursor-pointer rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover"
-      />
+      <%= f.submit "Submit draw request", class: "cursor-pointer rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover", disabled: @verified_accounts.none? %>
       <%= link_to "Cancel", root_path, class: "rounded-lg px-4 py-2.5 text-sm font-semibold text-flexline-navy hover:bg-flexline-sidebar" %>
     </div>
   <% end %>

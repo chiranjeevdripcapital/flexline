@@ -2,44 +2,49 @@
   <div>
     <h1 class="text-2xl font-bold text-flexline-navy">Repayments</h1>
     <p class="mt-1 text-sm text-flexline-muted">
-      Instalments aggregate draws for the month. Status reflects operations marking when funds
-      are received (ACH handled manually in MVP).
+      Instalments generated when a draw is funded (equal principal split for now; interest/fees are PRD follow-ups).
     </p>
   </div>
 
   <section class="overflow-hidden rounded-xl border border-flexline-border bg-white shadow-card">
     <div class="border-b border-flexline-border bg-flexline-table-head px-4 py-3">
-      <h2 class="text-sm font-semibold text-flexline-navy">Upcoming & recent</h2>
+      <h2 class="text-sm font-semibold text-flexline-navy">Schedule</h2>
     </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-left text-sm">
-        <thead>
-          <tr
-            class="border-b border-flexline-border bg-flexline-table-head text-xs font-semibold uppercase tracking-wide text-flexline-navy"
-          >
-            <th class="px-4 py-3">Due date</th>
-            <th class="px-4 py-3">Amount</th>
-            <th class="px-4 py-3">Principal</th>
-            <th class="px-4 py-3">Interest</th>
-            <th class="px-4 py-3">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @rows.each do |row| %>
-            <tr class="border-b border-flexline-border last:border-0">
-              <td class="px-4 py-3 font-medium text-flexline-navy"><%= row[:due] %></td>
-              <td class="px-4 py-3"><%= row[:amount] %></td>
-              <td class="px-4 py-3 text-flexline-muted"><%= row[:principal] %></td>
-              <td class="px-4 py-3 text-flexline-muted"><%= row[:interest] %></td>
-              <td class="px-4 py-3">
-                <% cls =
-                  row[:status] == "Paid" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-sky-200 bg-sky-50 text-flexline-navy" %>
-                <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= cls %>"><%= row[:status] %></span>
-              </td>
+    <% if @installments.any? %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead>
+            <tr
+              class="border-b border-flexline-border bg-flexline-table-head text-xs font-semibold uppercase tracking-wide text-flexline-navy"
+            >
+              <th class="px-4 py-3">Due date</th>
+              <th class="px-4 py-3">Draw</th>
+              <th class="px-4 py-3">Amount</th>
+              <th class="px-4 py-3">Principal</th>
+              <th class="px-4 py-3">Interest</th>
+              <th class="px-4 py-3">Status</th>
             </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            <% @installments.each do |row| %>
+              <% cls =
+                row.status == "paid" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-sky-200 bg-sky-50 text-flexline-navy" %>
+              <tr class="border-b border-flexline-border last:border-0">
+                <td class="px-4 py-3 font-medium text-flexline-navy"><%= l(row.due_on) %></td>
+                <td class="px-4 py-3 text-flexline-muted"><%= row.draw.public_code %></td>
+                <td class="px-4 py-3"><%= format_money(row.amount_cents) %></td>
+                <td class="px-4 py-3 text-flexline-muted"><%= format_money(row.principal_cents) %></td>
+                <td class="px-4 py-3 text-flexline-muted"><%= format_money(row.interest_cents) %></td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= cls %>"><%= row.status.titleize %></span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="px-4 py-10 text-center text-sm text-flexline-muted">No instalments yet.</div>
+    <% end %>
   </section>
 </div>

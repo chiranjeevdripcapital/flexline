@@ -9,7 +9,14 @@ Rails.application.routes.draw do
   post "session", to: "sessions#create", as: :session
   delete "session", to: "sessions#destroy"
 
-  resources :bank_accounts, only: %i[index new create]
+  resources :bank_accounts, only: %i[index new create show] do
+    member do
+      post :plaid_complete
+      post :micro_confirm
+      post :restart_verification
+      post :use_micro_deposits_instead
+    end
+  end
   resources :draw_requests, only: %i[new create show]
   resources :repayments, only: %i[index]
 end

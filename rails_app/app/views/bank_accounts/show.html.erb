@@ -1,0 +1,151 @@
+<% a = @bank_account %>
+<% expired = a.micro_deposit? && a.micro_deposit_expired? && !a.verified? %>
+
+<div class="mx-auto max-w-2xl space-y-6">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-flexline-muted">Bank account</p>
+      <h1 class="text-2xl font-bold text-flexline-navy"><%= a.display_name %></h1>
+      <p class="mt-1 text-sm text-flexline-muted">···<%= a.mask_last4 %> · <%= a.account_type.titleize %></p>
+    </div>
+    <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= bank_account_status_pill_classes(a) %>">
+      <%= bank_account_status_label(a) %>
+    </span>
+  </div>
+
+  <% if flash[:notice].present? %>
+    <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950"><%= flash[:notice] %></div>
+  <% end %>
+  <% if flash[:alert].present? %>
+    <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-950"><%= flash[:alert] %></div>
+  <% end %>
+
+  <% if a.verified? %>
+    <section class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-card">
+      <h2 class="text-sm font-semibold text-emerald-950">Verified</h2>
+      <p class="mt-2 text-sm text-emerald-950/90">
+        This account can receive draw disbursements and, once repayment automation is live, will be eligible for ACH debits per your authorization agreements.
+      </p>
+      <dl class="mt-4 grid gap-2 text-sm text-emerald-950">
+        <div class="flex justify-between gap-4">
+          <dt class="text-emerald-900/80">Legal name</dt>
+          <dd class="font-medium"><%= a.legal_name_on_account %></dd>
+        </div>
+        <div class="flex justify-between gap-4">
+          <dt class="text-emerald-900/80">Verification method</dt>
+          <dd class="font-medium"><%= a.plaid? ? "Plaid" : "Micro-deposit" %></dd>
+        </div>
+        <% if a.primary_for_disbursement? %>
+          <div class="flex justify-between gap-4">
+            <dt class="text-emerald-900/80">Primary</dt>
+            <dd class="font-medium">Yes — default for new draws when you leave the default selection.</dd>
+          </div>
+        <% end %>
+      </dl>
+      <div class="mt-5 flex flex-wrap gap-3">
+        <%= link_to "Request a draw", new_draw_request_path, class: "inline-flex rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
+        <%= link_to "Back to all accounts", bank_accounts_path, class: "inline-flex rounded-lg border border-emerald-800/20 px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-100/80" %>
+      </div>
+      <p class="mt-4 text-xs text-emerald-900/80">
+        To change routing or account numbers, add a new bank account. Core fields stay read-only after verification to protect payout integrity.
+      </p>
+    </section>
+
+  <% elsif a.verification_status == "awaiting_plaid" %>
+    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card space-y-4">
+      <h2 class="text-sm font-semibold text-flexline-navy">Instant verification with Plaid</h2>
+      <p class="text-sm text-flexline-muted">
+        When Plaid Link is enabled, you will open your bank’s login in a secure window and select the account that matches the details you entered (<%= a.account_type.titleize %> · ···<%= a.mask_last4 %>).
+      </p>
+      <ul class="list-inside list-disc text-xs text-flexline-muted space-y-1">
+        <li>If your institution is not listed or Plaid is temporarily down, use micro-deposits instead—no need to re-type routing and account numbers.</li>
+        <li>If you close this page before finishing, return here anytime; this account stays on <strong>Awaiting Plaid</strong> until you complete or switch paths.</li>
+      </ul>
+
+      <% plaid_demo = !Rails.env.production? || ENV["ALLOW_PLAID_SIMULATION"] == "true" %>
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <% if plaid_demo %>
+          <%= button_to "Simulate Plaid success (demo only)", plaid_complete_bank_account_path(a), method: :post, class: "inline-flex cursor-pointer justify-center rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
+        <% else %>
+          <p class="text-xs text-flexline-muted">
+            Plaid completion from this portal is disabled in production until server-side token exchange is configured. Use micro-deposits, or contact your Flexline operations contact.
+          </p>
+        <% end %>
+        <%= button_to "Switch to micro-deposits instead", use_micro_deposits_instead_bank_account_path(a), method: :post, class: "inline-flex cursor-pointer justify-center rounded-lg border border-flexline-border bg-white px-4 py-2.5 text-sm font-semibold text-flexline-navy hover:bg-flexline-sidebar" %>
+      </div>
+    </section>
+
+  <% elsif a.verification_status == "micro_deposit_sent" && expired %>
+    <section class="rounded-xl border border-rose-200 bg-rose-50/60 p-5 shadow-card space-y-3">
+      <h2 class="text-sm font-semibold text-rose-950">Micro-deposit window expired</h2>
+      <p class="text-sm text-rose-950/90">
+        Deposits sent more than <%= BankAccount::MICRO_DEPOSIT_EXPIRY_DAYS %> days ago can no longer be confirmed here. Start again so we can issue a fresh pair of deposits.
+      </p>
+      <%= button_to "Clear and start over", restart_verification_bank_account_path(a), method: :post, form: { data: { turbo_confirm: "This clears verification progress for this account so you can re-enter details. Continue?" } }, class: "inline-flex cursor-pointer justify-center rounded-lg bg-flexline-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800" %>
+    </section>
+
+  <% elsif a.micro_deposit_confirmable? %>
+    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card space-y-4">
+      <h2 class="text-sm font-semibold text-flexline-navy">Confirm micro-deposits</h2>
+      <p class="text-sm text-flexline-muted">
+        Enter the two small <strong>credit</strong> amounts you received from Flexline, in dollars with cents (for example <code class="rounded bg-flexline-sidebar px-1">0.32</code> for thirty-two cents).
+      </p>
+      <% if a.micro_deposit_attempts.positive? %>
+        <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+          Attempts used: <%= a.micro_deposit_attempts %> of <%= BankAccount::MICRO_DEPOSIT_MAX_ATTEMPTS %>.
+        </p>
+      <% end %>
+      <% if Rails.env.development? %>
+        <div class="rounded-lg border border-dashed border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-950">
+          <strong>Development only:</strong> expected amounts are <%= format_money(a.micro_deposit_a_cents) %> and <%= format_money(a.micro_deposit_b_cents) %> (order does not matter).
+        </div>
+      <% end %>
+      <%= form_with url: micro_confirm_bank_account_path(a), method: :post, class: "grid gap-4 sm:grid-cols-2" do %>
+        <div>
+          <%= label_tag :amount_a, "First deposit", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+          <%= text_field_tag :amount_a, nil, placeholder: "0.00", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2" %>
+        </div>
+        <div>
+          <%= label_tag :amount_b, "Second deposit", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+          <%= text_field_tag :amount_b, nil, placeholder: "0.00", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2" %>
+        </div>
+        <div class="sm:col-span-2 flex flex-wrap gap-3">
+          <%= submit_tag "Confirm amounts", class: "cursor-pointer rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
+        </div>
+      <% end %>
+      <p class="text-xs text-flexline-muted">
+        Sent <%= time_ago_in_words(a.micro_deposit_sent_at) %> ago. If you do not see deposits yet, wait until at least the next business day and check the correct account (<%= a.account_type.titleize %>).
+      </p>
+    </section>
+
+  <% elsif a.verification_status == "failed" %>
+    <section class="rounded-xl border border-rose-200 bg-rose-50/60 p-5 shadow-card space-y-3">
+      <h2 class="text-sm font-semibold text-rose-950">Verification did not complete</h2>
+      <p class="text-sm text-rose-950/90"><%= a.failure_reason.presence || "Please start again or contact support." %></p>
+      <%= button_to "Clear and start over", restart_verification_bank_account_path(a), method: :post, form: { data: { turbo_confirm: "Remove this attempt and enter bank details again?" } }, class: "inline-flex cursor-pointer justify-center rounded-lg bg-flexline-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800" %>
+    </section>
+
+  <% elsif a.verification_status == "incomplete" %>
+    <section class="rounded-xl border border-slate-200 bg-slate-50/80 p-5 shadow-card space-y-3">
+      <h2 class="text-sm font-semibold text-slate-900">Incomplete</h2>
+      <p class="text-sm text-slate-700">This record was reset or never finished submission. Remove it to clear saved details, then add the account again from a clean form.</p>
+      <%= button_to "Remove draft", restart_verification_bank_account_path(a), method: :post, form: { data: { turbo_confirm: "Remove this bank account from the portal?" } }, class: "inline-flex cursor-pointer justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-100" %>
+    </section>
+
+  <% else %>
+    <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">
+      <p class="text-sm text-flexline-muted">This verification state is not recognized in the UI template. Contact engineering with reference to status <code class="rounded bg-flexline-sidebar px-1"><%= a.verification_status %></code>.</p>
+    </section>
+  <% end %>
+
+  <% unless a.verified? %>
+    <div class="flex flex-wrap justify-between gap-3 border-t border-flexline-border pt-4">
+      <%= link_to "← All bank accounts", bank_accounts_path, class: "text-sm font-semibold text-flexline-green hover:underline" %>
+      <% if a.restartable? && %w[awaiting_plaid micro_deposit_sent].include?(a.verification_status) && !expired %>
+        <%= button_to "Abandon and start over", restart_verification_bank_account_path(a), method: :post, form: { data: { turbo_confirm: "Clear progress and re-enter bank details from scratch?" } }, class: "text-sm font-semibold text-rose-700 hover:underline" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= render "bank_accounts/verification_playbook" %>
+</div>

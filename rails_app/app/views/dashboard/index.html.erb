@@ -1,3 +1,9 @@
+<% org = @organization %>
+<% limit = org.credit_limit_cents.to_i %>
+<% available = org.available_cents.to_i %>
+<% utilized = [ limit - available, 0 ].max %>
+<% pct = limit.positive? ? ((available.to_f / limit) * 360).round : 0 %>
+
 <div class="mx-auto max-w-6xl space-y-8">
   <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
     <div>
@@ -17,26 +23,26 @@
       <div class="mt-4 flex flex-wrap items-center gap-8">
         <div
           class="relative grid h-28 w-28 place-items-center rounded-full"
-          style="background: conic-gradient(#2BB673 0deg 210deg, #e3eef6 210deg 360deg);"
+          style="background: conic-gradient(#2BB673 0deg <%= pct %>deg, #e3eef6 <%= pct %>deg 360deg);"
           aria-hidden="true"
         >
           <div
             class="absolute inset-2 grid place-items-center rounded-full bg-white text-center text-xs font-semibold text-flexline-navy shadow-inner"
           >
             <div>
-              <div class="text-lg leading-tight">$87.5k</div>
-              <div class="text-[10px] font-normal text-flexline-muted">of $150k</div>
+              <div class="text-lg leading-tight"><%= format_money(available) %></div>
+              <div class="text-[10px] font-normal text-flexline-muted">of <%= format_money(limit) %></div>
             </div>
           </div>
         </div>
         <div class="min-w-0 flex-1 space-y-2 text-sm">
           <div class="flex justify-between gap-4">
             <span class="text-flexline-muted">Utilized</span>
-            <span class="font-semibold text-flexline-navy">$62,500</span>
+            <span class="font-semibold text-flexline-navy"><%= format_money(utilized) %></span>
           </div>
           <div class="flex justify-between gap-4">
             <span class="text-flexline-muted">Available</span>
-            <span class="font-semibold text-flexline-green">$87,500</span>
+            <span class="font-semibold text-flexline-green"><%= format_money(available) %></span>
           </div>
           <%= link_to "View repayment schedule ›", repayments_path, class: "inline-block pt-2 text-sm font-semibold text-flexline-green hover:underline" %>
         </div>
@@ -73,7 +79,7 @@
     <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">
       <h2 class="text-sm font-semibold text-flexline-navy">Repayments</h2>
       <p class="mt-1 text-xs text-flexline-muted">
-        See instalments, due dates, and statuses (demo data).
+        Instalments created from funded draws (demo schedule; not finance-final).
       </p>
       <%= link_to "Open repayments ›", repayments_path, class: "mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-flexline-green bg-white px-4 py-2.5 text-sm font-semibold text-flexline-green transition hover:bg-emerald-50" %>
     </section>
@@ -83,46 +89,52 @@
     <div class="border-b border-flexline-border bg-flexline-table-head px-4 py-3">
       <h2 class="text-sm font-semibold text-flexline-navy">Recent draws</h2>
     </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-left text-sm">
-        <thead>
-          <tr
-            class="border-b border-flexline-border bg-flexline-table-head text-xs font-semibold uppercase tracking-wide text-flexline-navy"
-          >
-            <th class="px-4 py-3">Draw ID</th>
-            <th class="px-4 py-3">Amount</th>
-            <th class="px-4 py-3">Term</th>
-            <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3">Last updated</th>
-            <th class="px-4 py-3 text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @draws.each do |row| %>
-            <tr class="border-b border-flexline-border last:border-0">
-              <td class="px-4 py-3 font-semibold text-flexline-navy"><%= row[:id] %></td>
-              <td class="px-4 py-3"><%= row[:amount] %></td>
-              <td class="px-4 py-3"><%= row[:term] %></td>
-              <td class="px-4 py-3">
-                <% variant =
-                  case row[:status]
-                  when "Funded"
-                    "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-900"
-                  when "Processing"
-                    "rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-900"
-                  else
-                    "rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-flexline-navy"
-                  end %>
-                <span class="<%= variant %>"><%= row[:status] %></span>
-              </td>
-              <td class="px-4 py-3 text-flexline-muted"><%= row[:updated] %></td>
-              <td class="px-4 py-3 text-right">
-                <%= link_to "View ›", new_draw_request_path, class: "text-sm font-semibold text-flexline-green hover:underline" %>
-              </td>
+    <% if @draws.any? %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead>
+            <tr
+              class="border-b border-flexline-border bg-flexline-table-head text-xs font-semibold uppercase tracking-wide text-flexline-navy"
+            >
+              <th class="px-4 py-3">Draw ID</th>
+              <th class="px-4 py-3">Amount</th>
+              <th class="px-4 py-3">Term</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Last updated</th>
+              <th class="px-4 py-3 text-right">Action</th>
             </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            <% @draws.each do |draw| %>
+              <% variant =
+                case draw.status
+                when "funded"
+                  "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-900"
+                when "processing"
+                  "rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-900"
+                when "declined"
+                  "rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-900"
+                else
+                  "rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-flexline-navy"
+                end %>
+              <tr class="border-b border-flexline-border last:border-0">
+                <td class="px-4 py-3 font-semibold text-flexline-navy"><%= draw.public_code %></td>
+                <td class="px-4 py-3"><%= format_money(draw.amount_cents) %></td>
+                <td class="px-4 py-3"><%= draw.term_months %> mo</td>
+                <td class="px-4 py-3">
+                  <span class="<%= variant %>"><%= draw.status.titleize %></span>
+                </td>
+                <td class="px-4 py-3 text-flexline-muted"><%= l(draw.updated_at, format: :short) %></td>
+                <td class="px-4 py-3 text-right">
+                  <%= link_to "View ›", draw_request_path(draw), class: "text-sm font-semibold text-flexline-green hover:underline" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="px-4 py-10 text-center text-sm text-flexline-muted">No draws yet.</div>
+    <% end %>
   </section>
 </div>

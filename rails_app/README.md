@@ -13,11 +13,19 @@ Borrower portal MVP scaffold using **Ruby on Rails 8**, **SQLite**, **Propshaft*
 cd rails_app
 bundle install
 bin/rails db:prepare
+bin/rails db:seed
 bin/rails tailwindcss:build
 bin/rails server
 ```
 
-Visit `http://localhost:3000`. Sign in UI: `http://localhost:3000/login` (demo submit only sets a session flag).
+Visit `http://localhost:3000` (you’ll be redirected to sign in).
+
+### Demo credentials (from `db/seeds.rb`)
+
+- **Email:** `pilot@example.com`
+- **Password:** `password123`
+
+This seeds an organization with a credit line, a verified bank account, and a pending second account.
 
 ### CSS watch (development)
 

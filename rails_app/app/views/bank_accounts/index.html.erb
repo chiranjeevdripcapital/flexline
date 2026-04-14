@@ -2,8 +2,7 @@
   <div>
     <h1 class="text-2xl font-bold text-flexline-navy">Bank accounts</h1>
     <p class="mt-1 text-sm text-flexline-muted">
-      Verified accounts can be used for draw disbursement. Plaid / micro-deposit flows
-      will connect here in a later milestone.
+      Only <strong>verified</strong> accounts appear on draw requests. Operations and future automated payouts will not send funds elsewhere.
     </p>
   </div>
 
@@ -12,17 +11,27 @@
       <h2 class="text-sm font-semibold text-flexline-navy">Your accounts</h2>
       <%= link_to "Add bank account", new_bank_account_path, class: "inline-flex items-center justify-center gap-2 rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
     </div>
-    <ul class="mt-4 divide-y divide-flexline-border rounded-lg border border-flexline-border">
-      <% @accounts.each do |a| %>
-        <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <span class="text-sm font-medium text-flexline-navy"><%= a[:label] %></span>
-          <% badge =
-            a[:status] == "Verified" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-flexline-pending text-flexline-pending-text" %>
-          <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= badge %>">
-            <%= a[:status] == "Pending" ? "Pending verification" : a[:status] %>
-          </span>
-        </li>
-      <% end %>
-    </ul>
+    <% if @accounts.any? %>
+      <ul class="mt-4 divide-y divide-flexline-border rounded-lg border border-flexline-border">
+        <% @accounts.each do |a| %>
+          <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <%= link_to bank_account_path(a), class: "min-w-0 flex-1 group" do %>
+              <span class="block text-sm font-medium text-flexline-navy group-hover:text-flexline-green">
+                <%= a.display_name %>
+                <% if a.primary_for_disbursement? %>
+                  <span class="ml-1 text-xs font-normal text-flexline-muted">· Primary</span>
+                <% end %>
+              </span>
+              <span class="block text-xs text-flexline-muted">···<%= a.mask_last4 %> · <%= a.account_type.titleize %></span>
+            <% end %>
+            <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <%= bank_account_status_pill_classes(a) %>">
+              <%= bank_account_status_label(a) %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <div class="mt-4 text-sm text-flexline-muted">No bank accounts yet.</div>
+    <% end %>
   </section>
 </div>

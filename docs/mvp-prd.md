@@ -84,6 +84,18 @@ The MVP should give pilots a **single portal** to **authenticate**, **request dr
   - **AC:** **Micro-deposit fallback** when IAV is not possible; user is informed of delay (e.g. 1–2 business days); user can enter deposit amounts or verification code per chosen implementation; status updates on success/failure.
   - **AC:** Only **verified** accounts appear as selectable **disbursement** accounts on draw confirmation.
 
+#### 4.3.1 Bank verification — borrower edge cases (UX + rules)
+
+The portal design explicitly covers: **duplicate routing+account** (blocked with a single clear error); **legal name mismatch vs bank records** (captured at onboarding, re-checked by ops before payout); **Plaid unavailable / institution not listed** (in-place **switch to micro-deposits** without re-keying account numbers); **abandoned Plaid** (account remains **Awaiting Plaid** until completion, switch, or restart); **micro-deposit timing** (1–2 business day expectation, correct account type); **micro-deposit expiry** (configurable window, e.g. 10 days—restart required); **wrong micro amounts** (limited attempts, then **Failed** with restart); **verified account needs new numbers** (no in-place edit of core rails—**add + verify** a new account); **draw gating** (only **verified** selectable); **non-US / non-ACH** (copy + validation scope; Plaid errors funnel to micro where applicable).
+
+#### 4.3.2 Admin / operations — bank account and verification
+
+Importer **company** and **facility limit** remain the source of truth for **approved credit**; the portal reads **available / limit** from the integrated service (sync mechanism TBD). **Contacts** use **Enable Flexline Portal Login** so the right email can access the borrower portal.
+
+For bank accounts, admin/ops needs at minimum: **list** of accounts per organization with **verification status**, **method** (Plaid vs micro-deposit), **mask**, **primary disbursement flag**, **timestamps** (created, verified, failed), **failure reason** (if any), and **Plaid item/account identifiers** for support. **Draw** views must show **which verified bank account** was selected for disbursement. Operators run **transaction risk policy** before funding; **no payout** to an account unless portal (and admin) show **verified**. When funding completes, **draw status** updates in admin and portal; **email** notifications should fire on verification success/failure, draw processing/funded/declined, and micro-deposit lifecycle as agreed with comms.
+
+Future automation: **risk policy on draw submit** and **ACH/wire initiation** after pass—admin fields should support audit of **automation vs manual** decisions without redesigning the borrower flow.
+
 ### 4.4 Draw request
 
 - **As a** borrower **I want to** request a draw **so that** I receive working capital without emailing operations.
@@ -232,5 +244,6 @@ flowchart LR
 | Date       | Author  | Change                                                                 |
 | ---------- | ------- | ---------------------------------------------------------------------- |
 | 2026-04-14 | Product | Initial consolidated MVP PRD from internal drafts and pilot decisions. |
+| 2026-04-14 | Product | Added §4.3.1 borrower bank-verification edge cases and §4.3.2 admin/ops bank + notification requirements. |
 
 

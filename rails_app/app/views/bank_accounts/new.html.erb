@@ -1,5 +1,101 @@
-<div class="mx-auto max-w-lg space-y-4">
-  <h1 class="text-2xl font-bold text-flexline-navy">Add bank account</h1>
-  <p class="text-sm text-flexline-muted">Placeholder — connect Plaid or manual entry in a future iteration.</p>
-  <%= link_to "Back to list", bank_accounts_path, class: "inline-block rounded-lg border border-flexline-border bg-white px-4 py-2 text-sm font-semibold text-flexline-navy" %>
+<div class="mx-auto max-w-2xl space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold text-flexline-navy">Add bank account</h1>
+    <p class="mt-1 text-sm text-flexline-muted">
+      Disbursements and future repayments use this account only after verification. We never pay an unverified account.
+    </p>
+  </div>
+
+  <div class="rounded-lg border border-sky-200 bg-sky-50/90 p-4 text-sm text-sky-950">
+    <strong class="font-semibold text-flexline-navy">How verification works</strong>
+    <ul class="mt-2 list-inside list-disc space-y-1 text-sky-900/90">
+      <li><strong>Plaid (recommended):</strong> connect your bank in a secure window and confirm the account in minutes when enabled for your workspace.</li>
+      <li><strong>Micro-deposits:</strong> we send two small credits (typically in 1–2 business days). You enter the exact cent amounts here to confirm ownership.</li>
+    </ul>
+  </div>
+
+  <%= form_with model: @bank_account, url: bank_accounts_path, class: "space-y-5 rounded-xl border border-flexline-border bg-white p-6 shadow-card" do |f| %>
+    <% if @bank_account.errors.any? %>
+      <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+        <%= @bank_account.errors.full_messages.to_sentence %>
+      </div>
+    <% end %>
+
+    <div>
+      <%= f.label :display_name, "Account label", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+      <%= f.text_field :display_name, class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2", placeholder: "e.g. Operating · JPM" %>
+      <p class="mt-1 text-xs text-flexline-muted">Shown to your team in the portal. Include the institution if helpful.</p>
+    </div>
+
+    <div>
+      <%= f.label :legal_name_on_account, "Legal name on the account", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+      <%= f.text_field :legal_name_on_account, class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2", placeholder: "Must match bank records" %>
+      <p class="mt-1 text-xs text-flexline-muted">Use the exact business or signer name your bank has on file (mismatches delay payouts).</p>
+    </div>
+
+    <fieldset>
+      <legend class="text-xs font-semibold uppercase tracking-wide text-flexline-muted">Account type</legend>
+      <div class="mt-2 flex flex-wrap gap-3">
+        <% BankAccount::ACCOUNT_TYPES.each do |type| %>
+          <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold <%= f.object.account_type == type ? "border-flexline-navy bg-flexline-navy text-white" : "border-flexline-border text-flexline-navy hover:bg-flexline-sidebar" %>">
+            <%= f.radio_button :account_type, type, class: "sr-only" %>
+            <%= type.titleize %>
+          </label>
+        <% end %>
+      </div>
+    </fieldset>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <%= f.label :routing_number, "Routing number (ABA)", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+        <%= f.text_field :routing_number, maxlength: 9, autocomplete: "off", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2", placeholder: "9 digits" %>
+      </div>
+      <div class="sm:col-span-2">
+        <%= f.label :account_number, "Account number", class: "block text-xs font-semibold uppercase tracking-wide text-flexline-muted" %>
+        <%= f.password_field :account_number, autocomplete: "off", class: "mt-1 w-full rounded-lg border border-flexline-border px-3 py-2.5 text-sm outline-none ring-flexline-green focus:ring-2", placeholder: "4–17 digits" %>
+        <p class="mt-1 text-xs text-flexline-muted">US ACH accounts only. Last four digits are stored for display after save.</p>
+      </div>
+    </div>
+
+    <fieldset class="rounded-lg border border-flexline-border bg-flexline-table-head/40 p-4">
+      <legend class="px-1 text-xs font-semibold uppercase tracking-wide text-flexline-muted">Verification method</legend>
+      <div class="mt-3 space-y-3">
+        <label class="flex cursor-pointer gap-3 rounded-lg border border-flexline-border bg-white p-3 text-sm shadow-sm has-[:checked]:border-flexline-navy has-[:checked]:ring-2 has-[:checked]:ring-flexline-green">
+          <%= f.radio_button :verification_method, "plaid", class: "mt-1" %>
+          <span>
+            <span class="font-semibold text-flexline-navy">Plaid instant verification</span>
+            <span class="mt-0.5 block text-xs text-flexline-muted">Fastest when your bank participates. You will finish on the next screen.</span>
+          </span>
+        </label>
+        <label class="flex cursor-pointer gap-3 rounded-lg border border-flexline-border bg-white p-3 text-sm shadow-sm has-[:checked]:border-flexline-navy has-[:checked]:ring-2 has-[:checked]:ring-flexline-green">
+          <%= f.radio_button :verification_method, "micro_deposit", class: "mt-1" %>
+          <span>
+            <span class="font-semibold text-flexline-navy">Micro-deposit (penny test)</span>
+            <span class="mt-0.5 block text-xs text-flexline-muted">Use when Plaid is unavailable or your bank is not listed. Takes 1–2 business days before you can enter amounts.</span>
+          </span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="rounded-lg border border-flexline-border px-4 py-3">
+      <%= f.label :primary_for_disbursement, class: "flex cursor-pointer items-start gap-3 text-sm text-flexline-navy" do %>
+        <%= f.check_box :primary_for_disbursement, class: "mt-1 h-4 w-4 rounded border-flexline-border text-flexline-green focus:ring-flexline-green" %>
+        <span>
+          <span class="font-semibold">Primary disbursement account</span>
+          <span class="mt-0.5 block text-xs font-normal text-flexline-muted">Mark the account you expect most draws to use. You can still select another verified account per draw.</span>
+        </span>
+      <% end %>
+    </div>
+
+    <p class="text-xs leading-relaxed text-flexline-muted">
+      For this pilot, sensitive numbers are stored for demo purposes. Before production, engineering will enable encryption at rest, tighten access logging, and wire Plaid server-side token exchange.
+    </p>
+
+    <div class="flex flex-wrap gap-3">
+      <%= f.submit "Save and start verification", class: "cursor-pointer rounded-lg bg-flexline-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-flexline-green-hover" %>
+      <%= link_to "Cancel", bank_accounts_path, class: "rounded-lg px-4 py-2.5 text-sm font-semibold text-flexline-navy hover:bg-flexline-sidebar" %>
+    </div>
+  <% end %>
+
+  <%= render "bank_accounts/verification_playbook" %>
 </div>

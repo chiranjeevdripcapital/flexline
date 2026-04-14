@@ -22,6 +22,14 @@
         <%= flash[:notice] %>
       </div>
     <% end %>
+    <% if flash[:alert] %>
+      <div
+        class="border-b border-rose-200 bg-rose-50 px-6 py-3 text-center text-sm font-medium text-rose-900"
+        role="alert"
+      >
+        <%= flash[:alert] %>
+      </div>
+    <% end %>
     <div class="flex min-h-screen">
       <%= render "layouts/sidebar" %>
       <div class="flex min-w-0 flex-1 flex-col">
@@ -38,13 +46,14 @@
           </span>
           <div class="flex items-center gap-2">
             <div class="text-right text-sm leading-tight">
-              <div class="font-semibold text-flexline-navy">Alex Pilot</div>
+              <div class="font-semibold text-flexline-navy"><%= current_user.email %></div>
               <div class="text-xs text-flexline-muted">Borrower</div>
             </div>
             <div
               class="flex h-9 w-9 items-center justify-center rounded-md bg-flexline-navy text-xs font-bold text-white"
+              aria-hidden="true"
             >
-              AP
+              <%= current_user.email.first(2).upcase %>
             </div>
           </div>
         </header>

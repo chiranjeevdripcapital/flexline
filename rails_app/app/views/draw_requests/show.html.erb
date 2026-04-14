@@ -1,5 +1,27 @@
-<div class="mx-auto max-w-lg space-y-2">
-  <h1 class="text-xl font-bold text-flexline-navy">Draw <%= @draw_id %></h1>
-  <p class="text-sm text-flexline-muted">Detail view placeholder.</p>
+<div class="mx-auto max-w-2xl space-y-4">
+  <div>
+    <h1 class="text-xl font-bold text-flexline-navy"><%= @draw.public_code %></h1>
+    <p class="mt-1 text-sm text-flexline-muted">
+      <%= format_money(@draw.amount_cents) %> · <%= @draw.term_months %> months · <%= @draw.status.titleize %>
+    </p>
+  </div>
+
+  <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card">
+    <h2 class="text-sm font-semibold text-flexline-navy">Instalments</h2>
+    <% if @draw.installments.any? %>
+      <ul class="mt-3 space-y-2 text-sm">
+        <% @draw.installments.order(:sequence).each do |i| %>
+          <li class="flex items-center justify-between gap-3 border-b border-flexline-border py-2 last:border-0">
+            <span class="text-flexline-muted"><%= l(i.due_on) %></span>
+            <span class="font-semibold text-flexline-navy"><%= format_money(i.amount_cents) %></span>
+            <span class="text-xs text-flexline-muted"><%= i.status.titleize %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="mt-2 text-sm text-flexline-muted">No instalments found.</p>
+    <% end %>
+  </section>
+
   <%= link_to "Back to dashboard", root_path, class: "text-sm font-semibold text-flexline-green hover:underline" %>
 </div>
