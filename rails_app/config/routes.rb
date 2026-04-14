@@ -20,6 +20,7 @@ Rails.application.routes.draw do
       post :plaid_link_token
       post :plaid_exchange
       post :micro_confirm
+      post :complete_ach_authorization
       post :restart_verification
       post :use_micro_deposits_instead
     end

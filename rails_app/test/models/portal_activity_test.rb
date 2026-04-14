@@ -20,12 +20,13 @@ class PortalActivityTest < ActiveSupport::TestCase
       mask_last4: "0888",
       verification_status: "verified",
       verification_method: "micro_deposit",
+      ach_authorization_signed_at: Time.current,
       account_fingerprint: BankAccount.fingerprint_for("021000021", "1234567890888")
     )
     org.draws.create!(bank_account: ba, amount_cents: 10_000, term_months: 6, status: "processing")
 
     items = PortalActivity.for_organization(org)
     assert items.any? { |i| i.headline.start_with?("Draw FL-") }
-    assert items.any? { |i| i.headline == "Bank account verified" }
+    assert items.any? { |i| i.headline == "Bank account ready for draws" }
   end
 end

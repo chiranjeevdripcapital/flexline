@@ -14,6 +14,7 @@ class BankAccount < ApplicationRecord
     incomplete
     awaiting_plaid
     micro_deposit_sent
+    ownership_verified
     verified
     failed
     removed
@@ -33,6 +34,7 @@ class BankAccount < ApplicationRecord
   validates :account_number, format: { with: /\A\d{4,17}\z/ }, on: :details
   validates :mask_last4, format: { with: /\A\d{4}\z/ }
   validates :verification_status, inclusion: { in: VERIFICATION_STATUSES }
+  validates :ach_authorization_signed_at, presence: { message: "must be recorded when status is fully verified" }, if: -> { verification_status == "verified" }
 
   validate :fingerprint_unique_within_organization, on: :details
   validate :cannot_edit_verified_core_fields, on: :update
@@ -46,6 +48,11 @@ class BankAccount < ApplicationRecord
 
   def verified?
     verification_status == "verified"
+  end
+
+  # Plaid or micro-deposit ownership proof complete; ACH authorization letter not yet signed.
+  def ownership_verified?
+    verification_status == "ownership_verified"
   end
 
   def removed?
@@ -90,11 +97,26 @@ class BankAccount < ApplicationRecord
       update!(
         plaid_item_id: item_id,
         plaid_account_id: account_id,
-        verification_status: "verified",
+        verification_status: "ownership_verified",
+        ach_authorization_signed_at: nil,
         failure_reason: nil,
         micro_deposit_sent_at: nil,
         micro_deposit_a_cents: nil,
         micro_deposit_b_cents: nil
+      )
+      ensure_single_primary!
+    end
+  end
+
+  # Adobe eSign (or equivalent) reports signed ACH authorization — last step before draws.
+  def complete_ach_authorization!
+    raise "ACH can only be completed after ownership verification." unless ownership_verified?
+
+    transaction do
+      update!(
+        verification_status: "verified",
+        ach_authorization_signed_at: Time.current,
+        failure_reason: nil
       )
       ensure_single_primary!
     end
@@ -131,7 +153,8 @@ class BankAccount < ApplicationRecord
 
     if ok
       update!(
-        verification_status: "verified",
+        verification_status: "ownership_verified",
+        ach_authorization_signed_at: nil,
         failure_reason: nil
       )
       ensure_single_primary!
@@ -154,12 +177,11 @@ class BankAccount < ApplicationRecord
     micro_deposit? &&
       verification_status == "micro_deposit_sent" &&
       !micro_deposit_locked? &&
-      !micro_deposit_expired? &&
-      !verified?
+      !micro_deposit_expired?
   end
 
   def restartable?
-    !verified?
+    !verified? && !ownership_verified?
   end
 
   def label_for_draw_select
@@ -177,7 +199,8 @@ class BankAccount < ApplicationRecord
       micro_deposit_a_cents: nil,
       micro_deposit_b_cents: nil,
       micro_deposit_attempts: 0,
-      failure_reason: nil
+      failure_reason: nil,
+      ach_authorization_signed_at: nil
     )
   end
 
@@ -227,12 +250,13 @@ class BankAccount < ApplicationRecord
   end
 
   def cannot_edit_verified_core_fields
-    return unless verified? && persisted?
+    return unless persisted?
+    return unless verified? || ownership_verified?
 
     changed_core = (changed & %w[routing_number account_number account_type legal_name_on_account]).any?
     return unless changed_core
 
-    errors.add(:base, "Verified accounts cannot change core bank details here. Add a new account instead.")
+    errors.add(:base, "Accounts that completed ownership verification cannot change core bank details here. Add a new account instead.")
   end
 
   def ensure_single_primary!

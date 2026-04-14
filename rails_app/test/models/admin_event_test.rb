@@ -20,6 +20,7 @@ class AdminEventTest < ActiveSupport::TestCase
       mask_last4: "0111",
       verification_status: "verified",
       verification_method: "micro_deposit",
+      ach_authorization_signed_at: Time.current,
       account_fingerprint: BankAccount.fingerprint_for("021000021", "1234567890111")
     )
     draw = org.draws.create!(bank_account: ba, amount_cents: 10_000, term_months: 3, status: "processing")

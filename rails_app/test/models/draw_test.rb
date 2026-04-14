@@ -20,6 +20,7 @@ class DrawTest < ActiveSupport::TestCase
       mask_last4: "0123",
       verification_status: "verified",
       verification_method: "micro_deposit",
+      ach_authorization_signed_at: Time.current,
       account_fingerprint: BankAccount.fingerprint_for("021000021", "1234567890123")
     )
   end
@@ -53,5 +54,25 @@ class DrawTest < ActiveSupport::TestCase
     draw = @org.draws.new(bank_account: @bank, amount_cents: 999_999_999, term_months: 6, status: "processing")
     assert_not draw.save
     assert_includes draw.errors[:amount_cents].join, "exceeds"
+  end
+
+  test "create draw rejects bank that only completed ownership verification" do
+    pending_ach = @org.bank_accounts.create!(
+      display_name: "Pending ACH",
+      legal_name_on_account: "Draw Test Co",
+      account_type: "checking",
+      routing_number: "021000021",
+      account_number: "1234567890555",
+      mask_last4: "0555",
+      verification_status: "ownership_verified",
+      verification_method: "plaid",
+      plaid_item_id: "t",
+      plaid_account_id: "a",
+      ach_authorization_signed_at: nil,
+      account_fingerprint: BankAccount.fingerprint_for("021000021", "1234567890555")
+    )
+    draw = @org.draws.new(bank_account: pending_ach, amount_cents: 10_000, term_months: 6, status: "processing")
+    assert_not draw.save
+    assert_includes draw.errors[:bank_account].join, "verified"
   end
 end

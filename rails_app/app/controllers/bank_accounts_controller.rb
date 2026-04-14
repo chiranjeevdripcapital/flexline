@@ -7,6 +7,7 @@ class BankAccountsController < ApplicationController
     plaid_link_token
     plaid_exchange
     micro_confirm
+    complete_ach_authorization
     restart_verification
     use_micro_deposits_instead
   ]
@@ -70,7 +71,7 @@ class BankAccountsController < ApplicationController
       public_token: params.require(:public_token),
       plaid_account_id: params.require(:plaid_account_id)
     )
-    FlexlineMailer.bank_account_verified(@bank_account).deliver_later
+    FlexlineMailer.bank_account_ownership_verified(@bank_account).deliver_later
     render json: { ok: true, redirect_path: bank_account_path(@bank_account) }
   rescue Flexline::PlaidGateway::ConfigurationError
     render json: { error: "plaid_not_configured" }, status: :service_unavailable
@@ -96,8 +97,9 @@ class BankAccountsController < ApplicationController
     item_id = params[:item_id].presence || "plaid_demo_item"
     account_id = params[:account_id].presence || "plaid_demo_account"
     @bank_account.complete_plaid_verification!(item_id: item_id, account_id: account_id)
-    FlexlineMailer.bank_account_verified(@bank_account).deliver_later
-    redirect_to bank_account_path(@bank_account), notice: "Bank account verified. You can use it for draw disbursements."
+    FlexlineMailer.bank_account_ownership_verified(@bank_account).deliver_later
+    redirect_to bank_account_path(@bank_account),
+                notice: "Ownership verified. Sign the ACH authorization in the next step before this account can be used for draws."
   rescue StandardError => e
     Rails.logger.error("[bank_accounts#plaid_complete] #{e.class}: #{e.message}")
     redirect_to bank_account_path(@bank_account), alert: "Could not complete Plaid verification. Try again or use micro-deposits."
@@ -118,8 +120,9 @@ class BankAccountsController < ApplicationController
     end
 
     if @bank_account.confirm_micro_deposit_amounts!(amount_a_cents: a, amount_b_cents: b)
-      FlexlineMailer.bank_account_verified(@bank_account).deliver_later
-      redirect_to bank_account_path(@bank_account), notice: "Bank account verified. You can use it for draw disbursements."
+      FlexlineMailer.bank_account_ownership_verified(@bank_account).deliver_later
+      redirect_to bank_account_path(@bank_account),
+                  notice: "Ownership verified. Sign the ACH authorization in the next step before this account can be used for draws."
     else
       msg =
         if @bank_account.verification_status == "failed"
@@ -129,6 +132,26 @@ class BankAccountsController < ApplicationController
         end
       redirect_to bank_account_path(@bank_account), alert: msg
     end
+  end
+
+  def complete_ach_authorization
+    unless @bank_account.ownership_verified?
+      redirect_to bank_account_path(@bank_account), alert: "ACH authorization can only be completed after ownership verification."
+      return
+    end
+
+    unless ach_authorization_simulation_allowed?
+      redirect_to bank_account_path(@bank_account),
+                  alert: "Completing ACH from the portal is not enabled in this environment. Use the signing flow from your operations contact when available."
+      return
+    end
+
+    @bank_account.complete_ach_authorization!
+    FlexlineMailer.bank_account_ready_for_draws(@bank_account).deliver_later
+    redirect_to bank_account_path(@bank_account), notice: "ACH authorization recorded. This account is ready for draw disbursements."
+  rescue StandardError => e
+    Rails.logger.error("[bank_accounts#complete_ach_authorization] #{e.class}: #{e.message}")
+    redirect_to bank_account_path(@bank_account), alert: "Could not record ACH authorization. Try again or contact support."
   end
 
   def use_micro_deposits_instead
@@ -146,7 +169,8 @@ class BankAccountsController < ApplicationController
 
   def restart_verification
     unless @bank_account.restartable?
-      redirect_to bank_account_path(@bank_account), alert: "Verified accounts cannot be restarted here. Add a different account if details changed."
+      redirect_to bank_account_path(@bank_account),
+                  alert: "Accounts that completed ownership verification cannot be restarted here. Add a different account if details changed."
       return
     end
 
@@ -184,6 +208,11 @@ class BankAccountsController < ApplicationController
 
   # Plaid "complete without Link" is for local development only — not shown in customer-facing UAT/production.
   def plaid_simulation_allowed?
+    Rails.env.development?
+  end
+
+  # Until Adobe Sign (or similar) is wired, recording ACH completion from the portal is development-only.
+  def ach_authorization_simulation_allowed?
     Rails.env.development?
   end
 

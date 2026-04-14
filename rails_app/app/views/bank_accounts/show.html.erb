@@ -82,6 +82,39 @@
       </p>
     </section>
 
+  <% elsif a.ownership_verified? %>
+    <section class="rounded-xl border border-amber-200 bg-amber-50/60 p-5 shadow-card space-y-4">
+      <h2 class="text-sm font-semibold text-amber-950">Sign ACH authorization</h2>
+      <p class="text-sm text-amber-950/90">
+        Ownership of this account is confirmed (<%= a.plaid? ? "Plaid" : "micro-deposit" %>). Flexline cannot send draw disbursements until the <strong>ACH authorization</strong> for credits (and future debits, when enabled) is signed and on file.
+      </p>
+      <dl class="grid gap-2 text-sm text-amber-950">
+        <div class="flex justify-between gap-4">
+          <dt class="text-amber-900/80">Legal name</dt>
+          <dd class="font-medium"><%= a.legal_name_on_account %></dd>
+        </div>
+        <% if a.primary_for_disbursement? %>
+          <div class="flex justify-between gap-4">
+            <dt class="text-amber-900/80">Primary</dt>
+            <dd class="font-medium">Yes — will apply once the account is fully verified for draws.</dd>
+          </div>
+        <% end %>
+      </dl>
+      <% if Rails.env.development? %>
+        <div class="rounded-lg border border-dashed border-amber-400 bg-white/80 p-4">
+          <p class="text-xs text-amber-900/90">Local development: simulate Adobe Sign (or equivalent) completing.</p>
+          <%= button_to "Record ACH authorization signed (test)", complete_ach_authorization_bank_account_path(a), method: :post, class: "mt-2 inline-flex cursor-pointer justify-center rounded-lg border border-amber-500 bg-amber-100 px-4 py-2.5 text-sm font-semibold text-amber-950 hover:bg-amber-200" %>
+        </div>
+      <% else %>
+        <p class="text-xs text-amber-900/85">
+          You will receive instructions to sign electronically when e-sign is enabled for your workspace. Until then, contact Flexline operations if you need this step completed.
+        </p>
+      <% end %>
+      <div class="flex flex-wrap gap-3">
+        <%= link_to "Back to all accounts", bank_accounts_path, class: "inline-flex rounded-lg border border-amber-800/25 px-4 py-2.5 text-sm font-semibold text-amber-950 hover:bg-amber-100/80" %>
+      </div>
+    </section>
+
   <% elsif a.verification_status == "awaiting_plaid" %>
     <section class="rounded-xl border border-flexline-border bg-white p-5 shadow-card space-y-4">
       <h2 class="text-sm font-semibold text-flexline-navy">Instant verification with Plaid</h2>

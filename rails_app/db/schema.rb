@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_15_120009) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_15_120010) do
   create_table "admin_events", force: :cascade do |t|
     t.string "action", null: false
     t.string "actor_identifier", null: false
@@ -48,6 +48,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_15_120009) do
     t.boolean "primary_for_disbursement", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "ach_authorization_signed_at"
     t.index ["organization_id", "account_fingerprint"], name: "index_bank_accounts_on_org_and_fingerprint", unique: true
     t.index ["organization_id"], name: "index_bank_accounts_on_organization_id"
   end

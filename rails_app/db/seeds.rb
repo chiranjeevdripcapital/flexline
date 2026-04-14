@@ -28,7 +28,8 @@ verified.assign_attributes(
   verification_method: "plaid",
   primary_for_disbursement: true,
   plaid_item_id: "seed_item",
-  plaid_account_id: "seed_account"
+  plaid_account_id: "seed_account",
+  ach_authorization_signed_at: 2.weeks.ago
 )
 verified.save!(context: :details)
 
@@ -83,7 +84,8 @@ ba2.assign_attributes(
   verification_method: "plaid",
   primary_for_disbursement: true,
   plaid_item_id: "seed_item_2",
-  plaid_account_id: "seed_account_2"
+  plaid_account_id: "seed_account_2",
+  ach_authorization_signed_at: 2.weeks.ago
 )
 ba2.save!(context: :details)
 

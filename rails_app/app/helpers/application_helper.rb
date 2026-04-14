@@ -11,6 +11,8 @@ module ApplicationHelper
     case account.verification_status
     when "verified"
       "border-emerald-200 bg-emerald-50 text-emerald-900"
+    when "ownership_verified"
+      "border-amber-200 bg-flexline-pending text-flexline-pending-text"
     when "removed"
       "border-slate-300 bg-slate-100 text-slate-800"
     when "failed"
@@ -25,6 +27,7 @@ module ApplicationHelper
   def bank_account_status_label(account)
     case account.verification_status
     when "verified" then "Verified"
+    when "ownership_verified" then "Ownership verified · ACH pending"
     when "removed" then "Removed"
     when "failed" then "Failed"
     when "micro_deposit_sent" then "Micro-deposits sent"

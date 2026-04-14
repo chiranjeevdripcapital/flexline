@@ -27,7 +27,7 @@ Visit `http://localhost:3000` (you’ll be redirected to sign in).
 | `pilot@example.com` | `password123` | Demo Company Ltd. (`demo-importer-001`) |
 | `pilot2@example.com` | `password123` | Second Pilot LLC (`demo-importer-002`) |
 
-Each org has a **verified** bank account and a **sample draw in Processing** so you can exercise **`/admin`** (overview), **`/admin/draws`** (filters + CSV), **`/admin/organizations`**, **`/admin/bank_accounts`**, approve/decline, **operator notes**, and **admin event** audit without manual setup. The first org also keeps a second bank account on **micro-deposits**.
+Each org has a **fully verified** bank account (ownership plus **`ach_authorization_signed_at`**) and a **sample draw in Processing** so you can exercise **`/admin`** (overview), **`/admin/draws`** (filters + CSV), **`/admin/organizations`**, **`/admin/bank_accounts`**, approve/decline, **operator notes**, and **admin event** audit without manual setup. The first org also keeps a second bank account on **micro-deposits**.
 
 **Operations console:** HTTP Basic — development defaults to user **`admin`** / password **`development`**. Set `FLEXLINE_ADMIN_USERNAME` / `FLEXLINE_ADMIN_PASSWORD` in production. Start at **`/admin`** (overview with counts) or **`/admin/draws`**.
 
@@ -53,6 +53,7 @@ The separate **Vite + React** app in [`../web/`](../web/) was an earlier UI spik
 - **Importer limits:** `POST /internal/admin/facilities/sync` with header **`X-Flexline-Facility-Token`** updates `credit_limit_cents`, `available_cents`, `portal_status`, and `name` for the row keyed by **`importer_external_id`**. Demo org in seeds uses `importer_external_id: demo-importer-001`.
 - **Portal suspension:** If `portal_status` is **`suspended`**, signed-in users are redirected to **`/portal_suspension`** (draws and bank changes are blocked until sync sets `active` again).
 - **Plaid:** With **`PLAID_CLIENT_ID`** and **`PLAID_SECRET`** set, the bank verification page shows **Open Plaid Link** (token + exchange run on the server). Set **`PLAID_ENV`** to `sandbox`, `development`, or `production`. Optional: **`PLAID_WEBHOOK_URL`** (https), **`PLAID_RETAIN_ACCESS_TOKEN=true`** if you must keep Items instead of removing them after verify (default removes the Item so access tokens are not stored long-term).
+- **Bank verification stages:** After Plaid or micro-deposits succeed, the account is **`ownership_verified`** until the **ACH authorization** is signed; only then does it become **`verified`** and appear for draws. In **`RAILS_ENV=development`**, a **Record ACH authorization signed (test)** control completes that step (Adobe Sign or similar is intended for non-dev).
 
 ---
 
@@ -61,7 +62,7 @@ The separate **Vite + React** app in [`../web/`](../web/) was an earlier UI spik
 | Item | What to provide |
 | --- | --- |
 | **Email delivery (production)** | `FLEXLINE_MAILER_FROM`, `APP_HOST`, and either install SMTP ENV (`SMTP_ADDRESS`, … — see `config/initializers/smtp.rb`) or change `MAILER_DELIVERY_METHOD` / use a provider your DevOps prefers. |
-| **Plaid** | Dashboard **client_id** + **secret** → `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`. Without these, only micro-deposit verification is available in deployed environments. A local-only “complete verification (test)” action exists when `RAILS_ENV=development`. |
+| **Plaid** | Dashboard **client_id** + **secret** → `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`. Without these, only micro-deposit verification is available in deployed environments. A local-only “complete verification (test)” action exists when `RAILS_ENV=development`. ACH e-sign is not wired yet; development also exposes a button to **record ACH authorization signed** after ownership verification. |
 | **Admin UI** | `FLEXLINE_ADMIN_USERNAME` / **`FLEXLINE_ADMIN_PASSWORD`** for `/admin/draws` (defaults in development/test only: `admin` / `development`). |
 | **Importer → portal sync** | A shared secret in **`FLEXLINE_FACILITY_SYNC_TOKEN`** and your admin job POSTing JSON to **`/internal/admin/facilities/sync`** with header **`X-Flexline-Facility-Token`**. |
 | **Security hardening (next engineering pass)** | Encrypt `routing_number` / `account_number` at rest, rotate secrets, and attach real observability—**not** wired in this MVP branch. |

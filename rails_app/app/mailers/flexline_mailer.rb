@@ -19,10 +19,16 @@ class FlexlineMailer < ApplicationMailer
     mail to: notification_recipient!(@organization), subject: "Flexline: draw update (#{draw.public_code})"
   end
 
-  def bank_account_verified(bank_account)
+  def bank_account_ownership_verified(bank_account)
     @bank_account = bank_account
     @organization = bank_account.organization
-    mail to: notification_recipient!(@organization), subject: "Flexline: bank account verified"
+    mail to: notification_recipient!(@organization), subject: "Flexline: sign ACH authorization to finish bank setup"
+  end
+
+  def bank_account_ready_for_draws(bank_account)
+    @bank_account = bank_account
+    @organization = bank_account.organization
+    mail to: notification_recipient!(@organization), subject: "Flexline: bank account ready for draws"
   end
 
   private

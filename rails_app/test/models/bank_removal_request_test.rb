@@ -49,6 +49,7 @@ class BankRemovalRequestTest < ActiveSupport::TestCase
       mask_last4: last4,
       verification_status: "verified",
       verification_method: "micro_deposit",
+      ach_authorization_signed_at: Time.current,
       account_fingerprint: BankAccount.fingerprint_for("021000021", account_number),
       primary_for_disbursement: false
     )

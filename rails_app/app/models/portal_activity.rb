@@ -16,10 +16,20 @@ class PortalActivity
       )
     end
 
+    organization.bank_accounts.where(verification_status: "ownership_verified").order(updated_at: :desc).limit(4).each do |b|
+      entries << Entry.new(
+        at: b.updated_at,
+        headline: "Sign ACH authorization",
+        detail: "#{b.display_name} · ···#{b.mask_last4}",
+        amount_cents: nil,
+        path: Rails.application.routes.url_helpers.bank_account_path(b)
+      )
+    end
+
     organization.bank_accounts.verified.order(updated_at: :desc).limit(4).each do |b|
       entries << Entry.new(
         at: b.updated_at,
-        headline: "Bank account verified",
+        headline: "Bank account ready for draws",
         detail: "#{b.display_name} · ···#{b.mask_last4}",
         amount_cents: nil,
         path: Rails.application.routes.url_helpers.bank_account_path(b)
